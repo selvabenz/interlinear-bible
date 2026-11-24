@@ -68,7 +68,7 @@ Data shapes: [DATA_FORMAT.md](DATA_FORMAT.md). Content workflow: [CONTENT_GUIDE.
 ```bash
 npm ci
 npm run dev            # content build + dev server (http://localhost:5173)
-npm test               # 25 pipeline tests
+npm test               # 24 pipeline tests
 npm run check          # svelte-check, 0 errors / 0 warnings expected
 npm run build          # dist/
 npx playwright install chromium && npm run test:e2e   # 13 browser tests (desktop + phone)
@@ -82,11 +82,11 @@ Base path: local builds use `/`; Pages builds set `BASE_PATH=/interlinear-bible/
 | Check | Result |
 |---|---|
 | Content build (Philemon) | 25 verses · 348 Greek / 316 Tamil words · 222 groups · 168 units · 14 findings · 0 errors / 0 warnings — identical to `build.py` |
-| Unit tests (Vitest) | 25 passed: build.py parity (counts, gap words, omissions, text), design-data parity (unit and support state of every word, Greek links of every word, findings), validation of broken inputs, tokenizer on poetry/headings/verse ranges, file classification, no ESV in output |
+| Unit tests (Vitest) | 24 passed: build.py parity (counts, gap words, omissions, text), design-data parity (unit and support state of every word, Greek links of every word, findings), validation of broken inputs, tokenizer on poetry/headings/verse ranges, file classification, no ESV in output |
 | Type check | 0 errors, 0 warnings |
 | Browser tests (Playwright, production build) | 13 passed, 1 skipped (import on phone — covered on desktop): library, reading detail, layers, both orders, Tamil UI, study rail/marks, search across passages, flags after reload, import → local preview → remove, offline reload |
 | Visual check | Screens compared with the design pages at 1360 px and phone width; fixed: phone layers menu (now a bottom sheet), tall phone header (now scrolls away) |
-| Deployment | See activity log (§7) |
+| Deployment | Deploy workflow green (validate → unit → build → Pages). Live site checked in Chromium: library, study panel, service worker at /interlinear-bible/sw.js, manifest with 3 icons, no console errors |
 
 **Not verified:** the ESV API layer against the real API (no key available yet — enter one
 in Settings and check a passage; if the browser blocks the request (CORS), the fix is a tiny
@@ -119,7 +119,8 @@ published books (local books are already in IndexedDB); the hover bar is hidden 
 | 2026-11-24 | Scaffolded the project (#1). Ported and generalised the USFM tokenizer and readers (#2), join + validation (#3) with parity tests; content folder, build script, Philemon seeded with 435 `x-esv` attributes stripped (#4). |
 | 2026-11-24 | Built app shell (#5), library (#6), reading/study views and both orders (#7–#9), search/flags (#10), importer (#11), settings + ESV provider (#12), PWA (#14), CI/deploy (#15), Playwright tests (#16), docs (#13). |
 | 2026-11-24 | Bugs found by the browser tests and fixed: Svelte state proxies could not be posted to the import worker (now `$state.snapshot`); phone layers menu off-screen; phone header too tall. |
-| 2026-11-24 | Pushed to `main`, enabled GitHub Pages (Actions source), deploy workflow run — result recorded in the final report / board. |
+| 2026-11-24 | Pushed 13 commits to `main`; issues #1–#17 closed by their commits. Enabled GitHub Pages (Actions source). Deploy workflow passed; live site verified. Board: #1–#17 Done, backlog #18–#25 Todo. |
+| — | Note: GitHub warns that actions/checkout@v4, setup-node@v4, upload-artifact@v4 run on deprecated Node 20; bump to their next major versions when convenient. |
 
 ## 8. Where to start next
 
