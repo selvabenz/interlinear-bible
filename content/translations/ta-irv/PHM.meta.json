@@ -1,0 +1,8 @@
+{
+  "passages": {
+    "GREETING": { "en": "Greeting", "ta": "வாழ்த்துரை" },
+    "THANKSGIVING": { "en": "Thanksgiving", "ta": "நன்றி கூறுதல்" },
+    "APPEAL": { "en": "Appeal for Onesimus", "ta": "ஒநேசிமுவுக்காக மன்றாடுதல்" },
+    "CLOSING": { "en": "Closing words", "ta": "இறுதி வார்த்தைகள்" }
+  }
+}
