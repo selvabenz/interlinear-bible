@@ -3,19 +3,24 @@
     {
       "id": "ta-irv",
       "name": "Indian Revised Version (IRV) Tamil",
+      "shortName": "IRV Tamil",
       "nameNative": "இந்திய திருத்திய மொழிபெயர்ப்பு — தமிழ்",
       "language": "ta",
       "dir": "ltr",
       "licence": "CC BY-SA 4.0",
       "attribution": "Bridge Connectivity Solutions",
       "url": "https://creativecommons.org/licenses/by-sa/4.0/",
-      "sources": { "NT": "grc-tr", "OT": "hbo-wlc" }
+      "sources": {
+        "NT": "grc-tr",
+        "OT": "hbo-wlc"
+      }
     }
   ],
   "sources": [
     {
       "id": "grc-tr",
       "name": "Textus Receptus (Scrivener 1894)",
+      "shortName": "Textus Receptus 1894",
       "language": "grc",
       "dir": "ltr",
       "licence": "CC BY 4.0",
@@ -25,6 +30,7 @@
     {
       "id": "hbo-wlc",
       "name": "Hebrew Bible (Westminster Leningrad Codex)",
+      "shortName": "Leningrad Codex",
       "language": "hbo",
       "dir": "rtl",
       "licence": "CC BY 4.0",

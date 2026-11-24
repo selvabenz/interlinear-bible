@@ -147,6 +147,7 @@ export interface BookMeta {
 export interface TranslationInfo {
   id: string;
   name: string;
+  shortName?: string;
   nameNative?: string;
   language: string;             // BCP-47
   dir?: 'ltr' | 'rtl';
@@ -159,6 +160,7 @@ export interface TranslationInfo {
 export interface SourceInfo {
   id: string;
   name: string;
+  shortName?: string;
   language: string;             // grc | hbo
   dir: 'ltr' | 'rtl';
   licence: string;

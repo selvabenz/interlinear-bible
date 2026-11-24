@@ -1,0 +1,256 @@
+/* Design tokens from docs/design/*.design.html */
+:root {
+  --bg: #f6f3ec;
+  --bar: rgba(250, 248, 244, 0.95);
+  --line: #e6e0d2;
+  --line-soft: #f0ebdd;
+  --line-faint: #f4efe3;
+  --card: #fffdf8;
+  --card-line: #ece5d6;
+  --input-line: #ddd6c6;
+  --ink: #1f2a33;
+  --ink-2: #2a3740;
+  --ink-3: #3a474e;
+  --ink-4: #46545b;
+  --muted: #5f6e74;
+  --muted-2: #6d777d;
+  --muted-3: #7a858b;
+  --muted-4: #8a9399;
+  --muted-5: #9aa2a7;
+  --muted-6: #a8afb3;
+  --muted-7: #b3b9bc;
+  --faint: #cdd2cf;
+  --accent: #2c6f6b;
+  --accent-dark: #1f5450;
+  --accent-ink: #26615d;
+  --accent-soft: #e7f3f1;
+  --accent-wash: #f4faf9;
+  --accent-line: #d7e6e2;
+  --select: #d6eae6;
+  --related: #edf6f4;
+  --gold: #8a6a24;
+  --gold-soft: #f6efdf;
+  --mark: #17514d;
+  --mark-soft: #e4efed;
+  --greek: #4c6360;
+  --greek-strong: #3c5a58;
+  --note-bg: #efece2;
+  --dark: #1f2a33;
+  --danger: #a3402a;
+  --danger-soft: #f8e9e4;
+
+  --f-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-ta: 'Vijaya', 'Noto Serif Tamil', 'Latha', 'Nirmala UI', serif;
+  --f-ta-head: 'Noto Serif Tamil', 'Latha', 'Nirmala UI', serif;
+  --f-gr: 'Gentium Book Plus', 'SBL Greek', 'Times New Roman', serif;
+  --f-he: 'SBL Hebrew', 'Ezra SIL', 'Noto Serif Hebrew', 'Times New Roman', serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  --ta-size: 16px;
+  --src-size: 15.5px;
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: var(--f-ui);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(44, 111, 107, 0.3);
+}
+a:hover {
+  color: var(--accent-dark);
+  border-bottom-color: rgba(44, 111, 107, 0.7);
+}
+input,
+textarea,
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+::selection {
+  background: #cfe6e2;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* shared atoms */
+.mono {
+  font-family: var(--f-mono);
+}
+.ta {
+  font-family: var(--f-ta);
+}
+.gr {
+  font-family: var(--f-gr);
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-6);
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 12px;
+}
+.btn {
+  padding: 7px 13px;
+  border: 1px solid var(--input-line);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: var(--accent);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--card);
+  font-weight: 500;
+}
+.btn.primary:hover {
+  background: var(--accent-dark);
+}
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted-2);
+}
+.btn.danger {
+  color: var(--danger);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  border: 1px solid var(--input-line);
+  background: var(--card);
+  color: var(--muted-4);
+}
+.chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+.seg {
+  display: flex;
+  border: 1px solid var(--input-line);
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.seg button {
+  padding: 7px 11px;
+  border: none;
+  font-size: 12px;
+  background: var(--card);
+  color: var(--muted-4);
+  white-space: nowrap;
+}
+.seg button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--card);
+}
+.input {
+  padding: 7px 11px;
+  border: 1px solid var(--input-line);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 13px;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent);
+}
+.badge {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+.badge.flag {
+  color: var(--mark);
+  background: var(--mark-soft);
+}
+.badge.note {
+  color: var(--muted-2);
+  background: var(--note-bg);
+}
+.badge.muted {
+  color: var(--muted-3);
+  background: #f1eee6;
+}
+.pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eef2ea;
+  color: var(--muted-2);
+}
+.pill.ok {
+  background: var(--accent-soft);
+  color: #4d8a84;
+}
+.pill.flag {
+  background: var(--mark-soft);
+  color: var(--mark);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+  [data-print='hide'] {
+    display: none !important;
+  }
+  [data-print='page'] {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  [data-print='wrap'] {
+    padding: 0 !important;
+    display: block !important;
+  }
+}

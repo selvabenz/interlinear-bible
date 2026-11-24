@@ -1,12 +1,18 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
 // GitHub Pages serves the site from /<repo>/; CI sets BASE_PATH=/interlinear-bible/.
 const base = process.env.BASE_PATH || '/';
 
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version)
+  },
   plugins: [
     svelte(),
     VitePWA({
@@ -37,7 +43,12 @@ export default defineConfig({
       workbox: {
         // The app shell (JS, CSS, fonts, icons) is precached. Bible data is cached at runtime
         // so a newly published book shows up without a new app release.
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+        // Only the font subsets the app needs (Latin, Greek, Tamil) are precached;
+        // the fonts' other subsets (Cyrillic, Vietnamese …) are fetched only if ever used.
+        globPatterns: [
+          '**/*.{js,css,html,svg,png,webmanifest}',
+          '**/*-{latin,latin-ext,greek,greek-ext,tamil}-*.woff2'
+        ],
         globIgnores: ['data/**'],
         navigateFallback: 'index.html',
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
@@ -57,9 +68,5 @@ export default defineConfig({
       devOptions: { enabled: false }
     })
   ],
-  worker: { format: 'es' },
-  test: {
-    include: ['tests/unit/**/*.test.ts'],
-    environment: 'node'
-  }
+  worker: { format: 'es' }
 });
