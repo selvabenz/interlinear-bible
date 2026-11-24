@@ -3,9 +3,9 @@
   "from": "grc-ugnt",
   "to": "grc-tr",
   "book": "1JN",
-  "fromHash": "237bf401",
-  "toHash": "92e79916",
-  "generatedAt": "2026-11-24T17:54:42.726Z",
+  "fromHash": "c3dbf9d6",
+  "toHash": "50b0ab52",
+  "generatedAt": "2026-11-24T18:09:44.148Z",
   "stats": {"exact":2089,"spelling":1,"lexical":11,"unmatchedFrom":36,"unmatchedTo":76},
   "overrides": {},
   "auto": [
