@@ -65,7 +65,7 @@ describe('source-token lookup', () => {
 });
 
 const NT = ['grc-tr', 'grc-ugnt'];
-const tokens1JN = { 'grc-tr': file('content/sources/grc-tr/1JN.json'), 'grc-ugnt': file('content/sources/grc-ugnt/1JN.json') };
+const tokens1JN = { 'grc-tr': file('content/library/grc-tr/1JN.json'), 'grc-ugnt': file('content/library/grc-ugnt/1JN.json') };
 const aligned1JN = file('content/translations/ta-irv/1JN.aligned.usfm');
 
 describe('1 John: Bridge (UGNT) alignment, published in two editions', () => {
@@ -145,7 +145,7 @@ describe('Philemon: TR alignment also published against UGNT', () => {
       aligned: file('content/translations/ta-irv/PHM.aligned.usfm'),
       semantic: file('content/translations/ta-irv/PHM.semantic.usfm'),
       extra: file('content/translations/ta-irv/PHM.meta.json'),
-      tokens: { 'grc-tr': file('content/sources/grc-tr/PHM.json'), 'grc-ugnt': file('content/sources/grc-ugnt/PHM.json') },
+      tokens: { 'grc-tr': file('content/sources/grc-tr/PHM.json'), 'grc-ugnt': file('content/library/grc-ugnt/PHM.json') },
       sources: NT, sourceInfo: catalog.sources
     });
     expect(res.primary).toBe('grc-tr');
@@ -203,5 +203,29 @@ describe('Hebrew: UHB ⇄ WLC (Ruth, real tokens; synthetic alignment)', () => {
     const d = res.editions.find((e) => e.source === 'hbo-wlc')!;
     expect(d.result.issues.filter((i) => i.level === 'error')).toEqual([]);
     expect(d.remap!.kept).toBeGreaterThanOrEqual(Math.floor(1294 * 0.99));
+  });
+});
+
+describe('bundled word lists (content/library)', () => {
+  it('has every book of the Bible in each of its source texts, readable by the build', async () => {
+    const { BOOKS } = await import('../../src/lib/pipeline/books');
+    const { classifyFile } = await import('../../src/lib/pipeline/classify');
+    for (const b of BOOKS) {
+      for (const src of b.testament === 'NT' ? ['grc-tr', 'grc-ugnt'] : ['hbo-wlc', 'hbo-uhb']) {
+        const f = file(`content/library/${src}/${b.id}.json`);
+        const issues: import('../../src/lib/pipeline/types').Issue[] = [];
+        const m = readSource(f, issues);
+        expect(issues, `${src}/${b.id}`).toEqual([]);
+        expect(m.size, `${src}/${b.id}`).toBeGreaterThan(0);
+        expect(classifyFile(`${b.id}.json`, f.text)).toMatchObject({ role: 'source', book: b.id });
+      }
+    }
+  });
+
+  it('round-trips through the compact format', async () => {
+    const { encodeTokens, decodeTokens } = await import('../../src/lib/pipeline/tokens');
+    const raw = { 'Jas.1.1': [{ inst: '01', word: 'Ἰάκωβος', translit: 'Iakōbos', gloss: 'James', strong: 'G2385G', morph: 'N-NSM-P', lemma: 'Ἰάκωβος', lemma_gloss: 'James', editions: 'NA28+TR', tr_only: false, differs_from_na: true }] };
+    const back = decodeTokens(encodeTokens(raw, { book: 'JAS', source: 'grc-tr' }));
+    expect(back['1:1'][0]).toEqual({ inst: 1, word: 'Ἰάκωβος', translit: 'Iakōbos', gloss: 'James', strong: 'G2385G', morph: 'N-NSM-P', lemma: 'Ἰάκωβος', lemma_gloss: 'James', editions: 'NA28+TR', differs_from_na: true });
   });
 });

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 /*
  * Smoke tests of the built app with the first published book (PHM).
@@ -155,4 +156,25 @@ test('a Bridge (UGNT-aligned) book is readable in both source texts', async ({ p
   await page.goto('/#/read/ta-irv/1JN/c1');
   await expect(page.getByTestId('source-switch').getByRole('button', { name: 'UGNT' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-key="s:1:1#1"]')).toContainText('ὃ');
+});
+
+test('import needs only the aligned USFM, even for a book that is not published', async ({ page }) => {
+  test.skip(isPhone(page), 'file picking is covered on desktop');
+  // a translationCore-style file for 3 John 1:1, made from the bundled UGNT word list
+  const lib = JSON.parse(readFileSync(join(ROOT, 'content/library/grc-ugnt/3JN.json'), 'utf8')) as { v: Record<string, [number, string, string, string, string, string][]> };
+  const words = lib.v['1:1'];
+  const usfm = [
+    '\\id 3JN test', '\\h 3 யோவான்', '\\c 1',
+    '\\v 1 ' + words.map(([, w, , , st], k) =>
+      `\\zaln-s |x-strong="${st}0" x-morph="Gr,N,,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="${w}"\\*\\w சொல்${k + 1}|x-occurrence="1" x-occurrences="1"\\w*\\zaln-e\\*`
+    ).join(' ')
+  ].join('\n');
+  await page.goto('/#/import');
+  await page.locator('input[type=file]').setInputFiles({ name: '3jn-aligned.usfm', mimeType: 'text/plain', buffer: Buffer.from(usfm) });
+  await page.getByRole('button', { name: 'Check files' }).click();
+  const cards = page.locator('.result.card');
+  await expect(cards).toHaveCount(2, { timeout: 20000 });
+  await expect(cards.filter({ hasText: 'ta-irv · UGNT' })).toContainText('as aligned');
+  await expect(cards.filter({ hasText: 'ta-irv · Textus Receptus 1894' })).toContainText('remapped from UGNT');
+  await expect(page.getByText('Missing files')).toHaveCount(0);
 });
