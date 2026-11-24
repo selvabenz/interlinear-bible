@@ -127,3 +127,32 @@ test('works offline after the first visit', async ({ page, context }) => {
   await expect(page.locator('[data-key="t:1:1.1"]')).toContainText('கிறிஸ்து');
   await context.setOffline(false);
 });
+
+test('a Bridge (UGNT-aligned) book is readable in both source texts', async ({ page }) => {
+  // 1 John: aligned against UGNT, also published remapped to the Textus Receptus (catalog default)
+  await page.goto('/#/read/ta-irv/1JN/c5');
+  const sw = page.getByTestId('source-switch');
+  await expect(sw.getByRole('button', { name: 'Textus Receptus 1894' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.edition-note')).toContainText('remapped automatically from UGNT');
+
+  // the TR has the "three in heaven" words of 5:7; the UGNT does not (Greek word order)
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('ib-prefs') ?? '{}');
+    localStorage.setItem('ib-prefs', JSON.stringify({ ...p, order: 'source' }));
+  });
+  await page.reload();
+  const v57 = page.locator('[data-key^="s:5:7#"]');
+  await expect(v57.filter({ hasText: 'οὐρανῷ' })).not.toHaveCount(0);
+
+  await sw.getByRole('button', { name: 'UGNT' }).click();
+  await expect(page).toHaveURL(/src=grc-ugnt/);
+  await expect(page.getByTestId('source-switch').getByRole('button', { name: 'UGNT' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-key^="s:5:7#"]').first()).toBeVisible();
+  await expect(page.locator('[data-key^="s:5:7#"]').filter({ hasText: 'οὐρανῷ' })).toHaveCount(0);
+  await expect(page.locator('.edition-note')).toHaveCount(0);
+
+  // the choice is remembered for links without ?src=
+  await page.goto('/#/read/ta-irv/1JN/c1');
+  await expect(page.getByTestId('source-switch').getByRole('button', { name: 'UGNT' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-key="s:1:1#1"]')).toContainText('ὃ');
+});
