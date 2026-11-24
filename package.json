@@ -8,6 +8,10 @@
   "scripts": {
     "content": "tsx scripts/build-content.ts",
     "content:check": "tsx scripts/build-content.ts --check",
+    "content:strict": "tsx scripts/build-content.ts --check --strict",
+    "sources": "tsx scripts/sources/generate.ts",
+    "maps": "tsx scripts/build-maps.ts",
+    "sources:survey": "tsx scripts/sources/survey.ts",
     "predev": "npm run content",
     "dev": "vite",
     "prebuild": "npm run content",

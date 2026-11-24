@@ -27,7 +27,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate content
-        run: npm run content:check
+        run: npm run content:check -- --strict
       - name: Unit tests
         run: npm test
       - name: Build data and app

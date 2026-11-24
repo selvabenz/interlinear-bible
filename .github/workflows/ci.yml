@@ -19,7 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate content (USFM + source tokens)
-        run: npm run content:check
+        run: npm run content:check -- --strict
       - name: Unit tests (pipeline)
         run: npm test
       - name: Type check
