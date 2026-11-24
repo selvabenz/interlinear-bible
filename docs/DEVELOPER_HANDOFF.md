@@ -123,6 +123,8 @@ published books (local books are already in IndexedDB); the hover bar is hidden 
 | — | Note: GitHub warns that actions/checkout@v4, setup-node@v4, upload-artifact@v4 run on deprecated Node 20; bump to their next major versions when convenient. |
 | 2026-11-24 | Source-text editions (branch `feat/source-editions`). Bridge delivers books aligned in translationCore against uW UGNT/UHB; the owner chose to publish both texts and let readers switch, with the UGNT⇄TR / UHB⇄WLC remap automatic and its tables stored in the repo. Added: `npm run sources` (TR/WLC from STEPBible, UGNT/UHB from translationCore resources, glossed via STEPBible), `src/lib/pipeline/{strong,match,remap,editions,sources}.ts`, `npm run maps` → `content/maps/`, per-edition data paths `data/<tr>/<BOOK>/<source>/`, `?src=` routes, source switch in the Reader, preference in Settings, importer builds all editions and bundles maps. uW morphology converted to Robinson/OSHB; OSHB decoder added. First Bridge book: 1 John (1,805 links; TR edition keeps 1,774). Philemon also gets a UGNT edition (322 of 324 links). |
 | 2026-11-24 | Found: the Bridge 1 John file aligns ~150 Greek words in more than one place; kept as shared source words rather than dropped. vitest on Windows finds no tests when started from a lower-case drive path (`d:\…`); run from `D:\…`. |
+| 2026-11-24 | Whole-Bible survey (`npm run sources:survey`): all 66 books generate and map (OT 99.3–100 %, NT ~96.7–99 % matched). Found and fixed: TAGNT rows with alternative references in `[]`/`{}` were skipped (lost TR verses such as Jhn 7:53, Rom 16:25–27). Psalm titles: TAHOT has them as verse 0, the tC UHB has none — open question for when Psalms is aligned. |
+| 2026-11-24 | Owner: readers import only the aligned USFM; the app must bundle the word lists of all 66 books. Added `content/library/` (132 compact `ib-tokens-1` files, ~65 MB / 16 MB compressed), published as `data/library/` and fetched by the importer one book at a time; `content/sources/` is now an override (Philemon TR). Importer keeps same-named files apart. |
 
 ## 8. Where to start next
 
@@ -131,6 +133,6 @@ published books (local books are already in IndexedDB); the hover bar is hidden 
 2. Add the next book through [CONTENT_GUIDE.md](CONTENT_GUIDE.md) (#18); open a PR so CI runs.
 3. For the OT, start with Ruth (aligned in the pilot) and #19: `npm run sources -- RUT`, add the
    aligned USFM, `npm run content:check`.
-4. New Bridge books: copy the `*-aligned.usfm` as is, `npm run sources -- <BOOK>` (see
+4. New Bridge books: copy the `*-aligned.usfm` as is and run `npm run maps` (see
    [CONTENT_GUIDE.md](CONTENT_GUIDE.md)); review `content/maps/…/<BOOK>.json` stats and add
    `overrides` where an automatic link is wrong.

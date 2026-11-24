@@ -52,7 +52,7 @@ See **[docs/CONTENT_GUIDE.md](docs/CONTENT_GUIDE.md)**. In short:
 ```bash
 cp ROM.aligned.usfm   content/translations/ta-irv/     # Bridge/translationCore files work as they are
 cp ROM.semantic.usfm  content/translations/ta-irv/     # optional
-npm run sources -- ROM --stepbible <dir> --tc <dir>     # source tokens for TR + UGNT, and token maps
+npm run maps                                            # token maps (word lists for all books are bundled)
 npm run content:check                                   # must report 0 errors
 git add content && git commit -m "content(ROM): add Romans" && git push
 ```

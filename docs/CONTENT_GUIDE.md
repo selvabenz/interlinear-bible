@@ -20,8 +20,9 @@ For each book (USFM code from `\id`, e.g. `MAT`, `ROM`, `RUT`):
 | File | Required | Where it goes | Notes |
 |---|---|---|---|
 | Aligned USFM | **yes** | `content/translations/<translation>/` | translation text with `\zaln-s … \zaln-e\*` word alignment (unfoldingWord / translationCore / Scribe format) |
-| Source tokens | **yes** | `content/sources/<source>/<BOOK>.json` | Greek or Hebrew words with Strong's, morphology, gloss, transliteration (STEPBible TAGNT/TAHOT shape) — generated with `npm run sources -- <BOOK>` |
-| Token maps | generated | `content/maps/<from>__<to>/<BOOK>.json` | word-to-word maps between the source texts — `npm run maps` (run by `npm run sources`) |
+| Source word lists | bundled | `content/library/<source>/<BOOK>.json` | **already there for all 66 books** in TR, UGNT, WLC and UHB (Greek/Hebrew words with Strong's, morphology, gloss, transliteration) |
+| Curated word list | no | `content/sources/<source>/<BOOK>.json` | overrides the library for one book (Philemon's TR list from the pilot) |
+| Token maps | generated | `content/maps/<from>__<to>/<BOOK>.json` | word-to-word maps between the source texts — `npm run maps` |
 | Semantic USFM | no | `content/translations/<translation>/` | the same text with `\zsem` semantic units; adds study marks, passages, unit details |
 | Metadata | no | `content/translations/<translation>/<BOOK>.meta.json` | passage labels (English/Tamil) for the semantic passage scopes |
 
@@ -48,15 +49,30 @@ Copy the aligned USFM as it is; no conversion is needed:
 
 ```bash
 cp 1jn-aligned.usfm content/translations/ta-irv/1JN.aligned.usfm
-npm run sources -- 1JN --stepbible <STEPBible-Data dir> --tc <translationCore resources dir>
-npm run content:check                       # must report 0 errors
+npm run maps                                 # token map for the book
+npm run content:check                        # must report 0 errors
 ```
 
-`npm run sources` writes the token files of both source texts (TR/WLC from STEPBible
-TAGNT/TAHOT; UGNT/UHB from the newest version folder in translationCore's `resources`, with
-English glosses and transliteration matched from STEPBible) and then the token maps. Set
-`STEPBIBLE_DIR` / `TC_RESOURCES` instead of passing the folders each time. Existing token files
-are kept unless you pass `--force` (Philemon's pilot tokens are curated).
+In the app, **Import data** needs only that USFM file, for any book: the Greek and Hebrew word
+lists of every book ship with the app (`data/library/`, fetched one book at a time).
+
+### The bundled word lists (`content/library/`)
+
+132 files — every book in both source texts of its testament — in a compact format
+(`ib-tokens-1`, see DATA_FORMAT.md; about 65 MB, 16 MB compressed). They are regenerated only
+when a source text changes (a new UGNT/UHB release, STEPBible corrections):
+
+```bash
+npm run sources -- --all --force --stepbible <STEPBible-Data dir> --tc <translationCore resources dir>
+npm run sources:survey -- --stepbible <dir> --tc <dir>    # optional: match rates per book
+```
+
+TR/WLC come from STEPBible TAGNT/TAHOT; UGNT/UHB from the newest version folder in
+translationCore's `resources`, with English glosses and transliteration matched from STEPBible
+(UGL/UHL brief glosses where no match). Set `STEPBIBLE_DIR` / `TC_RESOURCES` instead of passing
+the folders. `npm run sources -- JAS` regenerates one book; existing files are kept unless
+`--force`. A file in `content/sources/<source>/<BOOK>.json` (any token format) overrides the
+library for that book.
 
 translationCore lets a translator align one Greek/Hebrew word in several places (when the
 translation repeats it); the app keeps every link (the source word lists all its translation
@@ -128,13 +144,12 @@ files under `content/sources/<id>/`.
 ## 3. Check and preview with the in-app importer
 
 1. Open the app → **Import data**.
-2. Choose the translation, then pick the files (or one `.zip` with all of them). For a book that
-   is already published you can pick **only the USFM**: the importer rebuilds the source tokens
-   from the published data.
+2. Choose the translation, then pick **only the aligned USFM** (plus a semantic USFM or
+   `meta.json` if you have them; a `.zip` works too). The Greek/Hebrew word lists come from
+   the published book if it exists, otherwise from the word lists bundled with the app — for
+   any book of the Bible.
 3. **Check files**. Each book gets one report per source text — *as aligned*, and *remapped
-   from …* for the others (with how many links carried over). A Bridge/translationCore file
-   aligned to UGNT/UHB needs only the USFM when that book is published already; otherwise add
-   the token files from `npm run sources`. Each report shows:
+   from …* for the others (with how many links carried over). Each report shows:
    * **errors** — the book cannot be built (unknown source word, a source word aligned twice,
      aligned and semantic files disagree, unbalanced milestones …);
    * **warnings** — built, but look at it (word matched by Strong's instead of its surface form,
@@ -167,7 +182,7 @@ files under `content/sources/<id>/`.
 ```bash
 npm run content         # validate content/ and write public/data/ (also runs before dev/build)
 npm run content:check   # validate only; exit code 1 on errors (CI adds --strict: stale maps fail too)
-npm run sources -- ROM  # source tokens for every source text of ROM, then npm run maps
+npm run sources -- --all --force   # regenerate the bundled word lists (only when a source text changes)
 npm run maps            # refresh token maps whose token files changed (--force: all)
 npm test                # pipeline unit tests, incl. parity with the pilot's build.py
                         # (on Windows run from a path with an upper-case drive letter, D:\…, or vitest finds no tests)
