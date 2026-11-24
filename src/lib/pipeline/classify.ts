@@ -27,11 +27,11 @@ export function classifyFile(name: string, text: string): Classified {
     try {
       const j = JSON.parse(text.replace(/^﻿/, ''));
       if (j && typeof j === 'object' && !Array.isArray(j)) {
-        if ('passages' in j || 'unitLabels' in j) {
+        if ('passages' in j || 'unitLabels' in j || 'alignedTo' in j) {
           const book = /([1-3]?[A-Za-z]{2,4})\.meta\.json$/i.exec(name)?.[1];
           return { role: 'meta', book: book ? normaliseBookId(book) : undefined, reason: 'Book metadata (passage labels)' };
         }
-        const keys = Object.keys(j);
+        const keys = Object.keys(j).filter((k) => !k.startsWith('_'));
         const m = keys.length ? /^([1-3]?[A-Za-z]+)[.\s]\d+[.:]\d+$/.exec(keys[0]) : null;
         if (m && Array.isArray(j[keys[0]])) return { role: 'source', book: normaliseBookId(m[1]), reason: 'Source-text tokens keyed by verse' };
       }

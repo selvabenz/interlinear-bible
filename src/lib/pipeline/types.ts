@@ -142,6 +142,17 @@ export interface BookMeta {
   builtAt: string;
   hash: string;                 // content hash of the inputs
   local?: boolean;              // imported in this browser, not published
+  /** primary = built from the aligned file as made; otherwise remapped automatically from `from` */
+  edition?: EditionInfo;
+}
+
+export interface EditionInfo {
+  primary: boolean;
+  from?: string;                // derived editions: the source text the alignment was made against
+  kept?: number;                // \zaln milestones carried over
+  dropped?: number;             // milestones with no counterpart in this edition
+  crossVerse?: number;          // milestones that now point into another verse (versification)
+  semanticOmitted?: boolean;    // the primary has study marks that are not carried over
 }
 
 export interface TranslationInfo {
@@ -154,7 +165,8 @@ export interface TranslationInfo {
   licence: string;
   attribution: string;
   url?: string;
-  sources: { NT?: string; OT?: string };
+  /** Source texts per testament; the first is the default edition. A single id is accepted. */
+  sources: { NT?: string | string[]; OT?: string | string[] };
 }
 
 export interface SourceInfo {
@@ -166,11 +178,16 @@ export interface SourceInfo {
   licence: string;
   attribution: string;
   url?: string;
+  /** 'uw' = unfoldingWord (UGNT/UHB): aligned files in uW format are detected as made against it */
+  format?: 'uw' | 'stepbible';
+  version?: string;
 }
 
 export interface CatalogBook {
   id: string;
   translation: string;
+  source: string;
+  edition?: EditionInfo;
   name: { en: string; native: string };
   testament: Testament;
   order: number;

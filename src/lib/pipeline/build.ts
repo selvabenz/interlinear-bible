@@ -10,6 +10,10 @@ import type {
 } from './types';
 import { readAligned, type ReadResult, type RGroup } from './reader';
 import { bookInfo, normaliseBookId } from './books';
+import { findSourceToken, stripPunct } from './match';
+import { normStrong } from './strong';
+
+export { stripPunct };
 
 export interface InputFile { name: string; text: string }
 
@@ -22,15 +26,17 @@ export interface BuildInput {
   extra?: InputFile;
   /** Book code to expect; taken from \id when omitted. */
   book?: string;
+  /** Allow a source word in more than one group (translationCore files); otherwise an error. */
+  sharedSources?: boolean;
+  /** Use these passages instead of deriving them (a derived edition keeps its primary's passages). */
+  passages?: Passage[];
+  /** Which edition of the book this is (see editions.ts). */
+  edition?: BookMeta['edition'];
 }
 
 const OK_S7 = new Set(['PRESERVED', 'PRESERVED_WITH_RESTRUCTURING', '']);
 const OK_COV = new Set(['COVERED', 'COVERED_BY_RESTRUCTURING', 'NOT_REQUIRED', '']);
 const REF_RE = /(?:([1-3]?[A-Za-z]{2,5})\.?\s+)?(\d+):(\d+)/;
-
-export function stripPunct(s: string): string {
-  return s.replace(/[\p{P}\p{Z}\p{S}]/gu, '');
-}
 
 export function natCompare(a: string, b: string): number {
   return a.localeCompare(b, 'en', { numeric: true });
@@ -40,6 +46,13 @@ function refKey(ref: string): [number, number] {
   const [c, v] = ref.split(':').map(Number);
   return [c, v];
 }
+/** "c:v.n" in reading order. */
+function compareTargetKey(a: string, b: string): number {
+  const [ar, an] = [a.slice(0, a.lastIndexOf('.')), +a.slice(a.lastIndexOf('.') + 1)];
+  const [br, bn] = [b.slice(0, b.lastIndexOf('.')), +b.slice(b.lastIndexOf('.') + 1)];
+  return compareRef(ar, br) || an - bn;
+}
+
 export function compareRef(a: string, b: string): number {
   const [ac, av] = refKey(a), [bc, bv] = refKey(b);
   return ac - bc || av - bv;
@@ -73,6 +86,7 @@ export function readSource(f: InputFile, issues: Issue[]): Map<string, SourceWor
   const out = new Map<string, SourceWord[]>();
   if (!raw) return out;
   for (const [key, toks] of Object.entries(raw)) {
+    if (key.startsWith('_')) continue; // file metadata such as "_meta"
     const m = /(\d+)[.:](\d+)$/.exec(key.trim());
     if (!m || !Array.isArray(toks)) {
       issues.push({ level: 'warning', code: 'source.bad-key', message: `Source entry “${key}” is not a verse reference; skipped`, file: f.name });
@@ -81,7 +95,7 @@ export function readSource(f: InputFile, issues: Issue[]): Map<string, SourceWor
     const ref = `${+m[1]}:${+m[2]}`;
     out.set(ref, toks.map((t, k) => {
       const strong = String(t.strong ?? '');
-      const st = strong.replace(/([GH]\d+)[A-Za-z]$/, '$1');
+      const st = normStrong(strong) || strong;
       const w: SourceWord = {
         i: t.inst !== undefined && t.inst !== '' ? parseInt(String(t.inst), 10) : k + 1,
         w: String(t.word ?? ''),
@@ -177,29 +191,15 @@ export function buildBook(input: BuildInput): BuildResult {
   }
 
   // ---------------------------------------------------------------- groups -> source tokens
+  let shared = 0;
   const tokenGroup = new Map<string, string>();            // "c:v#i" -> group id
   const groupSrc = new Map<string, string[]>();            // group id -> ["c:v#i"]
   const findToken = (ref: string, content: string | undefined, strong: string | undefined, occ: number) => {
-    const list = source.get(ref);
-    if (!list) return null;
-    if (content) {
-      for (const norm of [(s: string) => s, stripPunct]) {
-        const key = norm(content);
-        let n = 0;
-        for (const t of list) if (norm(t.w) === key && ++n === occ) return t;
-      }
+    const hit = findSourceToken(source.get(ref), content, strong, occ);
+    if (hit?.how === 'strong' && content) {
+      issues.push({ level: 'warning', code: 'zaln.matched-by-strong', ref, message: `Verse ${ref}: “${content}” not found in the source text; matched ${hit.tok.w} by Strong's ${normStrong(strong)} instead` });
     }
-    if (strong) {
-      const st = strong.replace(/([GH]\d+)[A-Za-z]$/, '$1');
-      let n = 0;
-      for (const t of list) {
-        if (t.st === st && ++n === occ) {
-          if (content) issues.push({ level: 'warning', code: 'zaln.matched-by-strong', ref, message: `Verse ${ref}: “${content}” not found in the source text; matched ${t.w} by Strong's ${st} instead` });
-          return t;
-        }
-      }
-    }
-    return null;
+    return hit ? hit.tok : null;
   };
   for (const g of A.groups) {
     const srcs: string[] = [];
@@ -221,7 +221,16 @@ export function buildBook(input: BuildInput): BuildResult {
       }
       const key = `${sref}#${tok.i}`;
       if (tokenGroup.has(key)) {
-        issues.push({ level: 'error', code: 'zaln.source-in-two-groups', ref: sref, message: `Source word ${tok.w} (${key}) is aligned in two groups` });
+        if (!input.sharedSources) {
+          issues.push({ level: 'error', code: 'zaln.source-in-two-groups', ref: sref, message: `Source word ${tok.w} (${key}) is aligned in two groups` });
+          continue;
+        }
+        // translationCore lets one source word be aligned in several places (a word the
+        // translation repeats): it stays in its first group and lists every target word.
+        const seen = new Set(tok.tgt);
+        tok.tgt = [...tok.tgt, ...g.words.filter((k) => !seen.has(k))].sort(compareTargetKey);
+        srcs.push(key);
+        shared++;
         continue;
       }
       tokenGroup.set(key, g.id);
@@ -230,6 +239,9 @@ export function buildBook(input: BuildInput): BuildResult {
       srcs.push(key);
     }
     groupSrc.set(g.id, srcs);
+  }
+  if (shared) {
+    issues.push({ level: 'info', code: 'zaln.shared-source', message: `${shared} alignment(s) reuse a source word that is already aligned elsewhere in its verse` });
   }
 
   // ---------------------------------------------------------------- verses
@@ -340,7 +352,7 @@ export function buildBook(input: BuildInput): BuildResult {
 
   // ---------------------------------------------------------------- passages
   const extraPassages = extra.passages ?? {};
-  const passages = derivePassages(units, [...versesOut.keys()], extraPassages);
+  const passages = input.passages ?? derivePassages(units, [...versesOut.keys()], extraPassages);
 
   // ---------------------------------------------------------------- chapters
   const chapters = new Map<number, Chapter>();
@@ -400,7 +412,8 @@ export function buildBook(input: BuildInput): BuildResult {
     stats,
     concordance,
     builtAt: new Date().toISOString(),
-    hash: hashText(input.aligned.text, input.semantic?.text ?? '', input.sourceTokens.text, input.extra?.text ?? '')
+    hash: hashText(input.aligned.text, input.semantic?.text ?? '', input.sourceTokens.text, input.extra?.text ?? ''),
+    ...(input.edition ? { edition: input.edition } : {})
   };
   const ok = !issues.some((i) => i.level === 'error');
   return { ok, issues, book, chapters: [...chapters.values()].sort((a, b) => a.c - b.c) };
