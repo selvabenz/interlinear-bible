@@ -18,8 +18,8 @@
       ? 'ஒரு புத்தகத்தைச் சேர்க்கவும் அல்லது புதுப்பிக்கவும். கோப்புகள் உங்கள் உலாவியிலேயே சரிபார்க்கப்படும்; எதுவும் பதிவேற்றப்படாது.'
       : 'Add or update a book. Files are checked here in your browser; nothing is uploaded.',
     need: ta
-      ? 'தேவை: \\zaln இணைப்புள்ள USFM. விருப்பம்: \\zsem சொற்பொருள் USFM, மூலச்சொல் JSON (ஏற்கனவே வெளியிடப்பட்ட புத்தகத்திற்குத் தேவையில்லை), <BOOK>.meta.json. .zip கோப்பும் ஏற்கப்படும்.'
-      : 'Needed: USFM with \\zaln word alignment (translationCore / Bridge files aligned to UGNT or UHB work as they are). Optional: USFM with \\zsem semantic units, source-token JSON (not needed for a book that is already published), <BOOK>.meta.json passage labels. A .zip of these works too. The book is checked once per source text: as aligned, and remapped automatically to each other source text.',
+      ? 'தேவை: \\zaln இணைப்புள்ள USFM மட்டும் — வேதாகமத்தின் எந்தப் புத்தகத்திற்கும் (UGNT/UHB உடன் இணைத்த translationCore / Bridge கோப்புகள் அப்படியே ஏற்கப்படும்). கிரேக்க, எபிரெயச் சொல் பட்டியல்கள் செயலியிலேயே உள்ளன. விருப்பம்: \\zsem சொற்பொருள் USFM, <BOOK>.meta.json. .zip கோப்பும் ஏற்கப்படும்.'
+      : 'Needed: only the USFM with \\zaln word alignment, for any book of the Bible (translationCore / Bridge files aligned to UGNT or UHB work as they are) — the Greek and Hebrew word lists come with the app. Optional: USFM with \\zsem semantic units, <BOOK>.meta.json passage labels. A .zip works too. The book is checked once per source text: as aligned, and remapped automatically to each other source text.',
     translation: ta ? 'மொழிபெயர்ப்பு' : 'Translation',
     choose: ta ? 'கோப்புகளைத் தேர்ந்தெடு' : 'Choose files',
     drop: ta ? 'அல்லது இங்கே இழுத்து விடவும்' : 'or drop them here',
@@ -82,8 +82,17 @@
     err = '';
     try {
       const got = await readFiles(list);
-      const names = new Set(got.map((f) => f.name));
-      files = [...files.filter((f) => !names.has(f.name)), ...got];
+      // the same file chosen again replaces itself; a different file with the same name (e.g.
+      // grc-tr/JAS.json and grc-ugnt/JAS.json) is kept under a distinct name
+      let next = [...files];
+      for (const g of got) {
+        const same = next.findIndex((f) => f.name === g.name);
+        if (same >= 0 && next[same].text === g.text) continue;
+        let name = g.name;
+        for (let k = 2; next.some((f) => f.name === name); k++) name = g.name.replace(/(\.[^.]+)?$/, ` (${k})$1`);
+        next = [...next, { ...g, name }];
+      }
+      files = next;
       res = null;
     } catch (e) {
       err = (e as Error).message;

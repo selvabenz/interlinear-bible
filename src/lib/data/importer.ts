@@ -21,7 +21,8 @@ export async function readFiles(list: FileList | File[]): Promise<InputFile[]> {
       const entries = unzipSync(new Uint8Array(await f.arrayBuffer()));
       for (const [name, data] of Object.entries(entries)) {
         if (!TEXT.test(name) || name.startsWith('__MACOSX')) continue;
-        out.push({ name: name.split('/').pop()!, text: strFromU8(data) });
+        // keep folders in the name: grc-tr/JAS.json and grc-ugnt/JAS.json are different files
+        out.push({ name: name.replace(/^content\/sources\//, ''), text: strFromU8(data) });
       }
     } else if (TEXT.test(f.name)) {
       out.push({ name: f.name, text: await f.text() });
@@ -63,12 +64,25 @@ export async function publishedSource(translation: string, book: string, source:
 }
 
 const PUBLISHED = '(from the published data)';
+const BUNDLED = '(bundled with the app)';
+
+/** The app's bundled word list of a book in a source text (data/library/<source>/<BOOK>.json). */
+export async function bundledSource(book: string, source: string): Promise<InputFile | null> {
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}data/library/${source}/${book}.json`);
+    if (!r.ok) return null;
+    return { name: `${source}/${book}.json ${BUNDLED}`, text: await r.text() };
+  } catch {
+    return null;
+  }
+}
 
 export async function runImport(files: InputFile[], translation: string): Promise<WorkerResponse> {
   const catalog = await loadCatalog().catch(() => null);
   const sources = catalog?.translations.find((t) => t.id === translation)?.sources ?? { NT: 'grc-tr', OT: 'hbo-wlc' };
   const sourceInfo = catalog?.sources ?? [];
-  // source texts not supplied with the USFM: reuse each published edition's tokens
+  // source texts not supplied with the USFM: the published edition's tokens if the book is
+  // published in that text, else the word list bundled with the app — so a USFM file is enough
   const roles = files.map((f) => classifyFile(f.name, f.text));
   const usfmBooks = new Set(roles.filter((r) => r.role === 'aligned' && r.book).map((r) => r.book!));
   const extra: InputFile[] = [];
@@ -81,8 +95,8 @@ export async function runImport(files: InputFile[], translation: string): Promis
     );
     for (const id of ids) {
       if (supplied.has(id)) continue;
-      if (!catalog?.books.some((x) => x.translation === translation && x.id === b && x.source === id)) continue;
-      const src = await publishedSource(translation, b, id);
+      const published = catalog?.books.some((x) => x.translation === translation && x.id === b && x.source === id);
+      const src = (published ? await publishedSource(translation, b, id) : null) ?? (await bundledSource(b, id));
       if (src) extra.push(src);
     }
   }
@@ -104,7 +118,7 @@ export function contentBundle(translation: string, r: WorkerBookResult): Blob {
   const files: Record<string, Uint8Array> = {};
   for (const f of r.files) {
     if (f.role === 'source') {
-      if (f.name.includes(PUBLISHED)) continue; // already in the repo
+      if (f.name.includes(PUBLISHED) || f.name.includes(BUNDLED)) continue; // already in the repo
       files[`content/sources/${f.source ?? r.sourceId}/${r.book}.json`] = strToU8(f.text);
     } else if (f.role === 'aligned') files[`content/translations/${translation}/${r.book}.aligned.usfm`] = strToU8(f.text);
     else if (f.role === 'semantic') files[`content/translations/${translation}/${r.book}.semantic.usfm`] = strToU8(f.text);

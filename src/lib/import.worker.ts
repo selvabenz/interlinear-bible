@@ -70,7 +70,14 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
       continue;
     }
     if (!Object.keys(f.sources).length) {
-      missing.push({ book, need: ['source tokens (.json)'] });
+      missing.push({
+        book,
+        need: [
+          `source tokens (.json) — the Greek/Hebrew word lists of ${book} could not be loaded from the app ` +
+            '(offline, or the book is missing from content/library). Reconnect and try again, or add the ' +
+            `word lists (npm run sources -- ${book}) together with the USFM.`
+        ]
+      });
       continue;
     }
     const ids = sourcesFor({ sources }, info.testament);
