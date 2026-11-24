@@ -46,21 +46,26 @@ function filesIn(dir: string, prefix: string): string[] {
 
 interface Row { book: string; abbr: string; c: number; v: number; hc?: number; hv?: number; inst: string; type: string; f: string[] }
 
-const cache = new Map<string, Row[]>();
+// every row of a corpus, grouped by book — each (large) file is read once per run
+const cache = new Map<string, Map<string, Row[]>>();
 function rows(dir: string, prefix: 'TAGNT' | 'TAHOT', book: string): Row[] {
-  const ck = `${prefix}:${book}`;
-  if (cache.has(ck)) return cache.get(ck)!;
-  const out: Row[] = [];
-  for (const file of filesIn(dir, prefix)) {
-    for (const line of readFileSync(file, 'utf8').split('\n')) {
-      const f = line.replace(/\r$/, '').split('\t');
-      const m = KEY.exec(f[0]);
-      if (!m || normaliseBookId(m[1]) !== book) continue;
-      out.push({ book, abbr: m[1], c: +m[2], v: +m[3], hc: m[4] ? +m[4] : undefined, hv: m[5] ? +m[5] : undefined, inst: m[6], type: m[7], f });
+  let byBook = cache.get(prefix);
+  if (!byBook) {
+    byBook = new Map();
+    for (const file of filesIn(dir, prefix)) {
+      for (const line of readFileSync(file, 'utf8').split('\n')) {
+        const f = line.replace(/\r$/, '').split('\t');
+        const m = KEY.exec(f[0]);
+        if (!m) continue;
+        const b = normaliseBookId(m[1]);
+        let list = byBook.get(b);
+        if (!list) byBook.set(b, (list = []));
+        list.push({ book: b, abbr: m[1], c: +m[2], v: +m[3], hc: m[4] ? +m[4] : undefined, hv: m[5] ? +m[5] : undefined, inst: m[6], type: m[7], f });
+      }
     }
+    cache.set(prefix, byBook);
   }
-  cache.set(ck, out);
-  return out;
+  return byBook.get(book) ?? [];
 }
 
 const split = (s: string) => {

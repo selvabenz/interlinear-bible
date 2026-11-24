@@ -31,6 +31,9 @@ export function classifyFile(name: string, text: string): Classified {
           const book = /([1-3]?[A-Za-z]{2,4})\.meta\.json$/i.exec(name)?.[1];
           return { role: 'meta', book: book ? normaliseBookId(book) : undefined, reason: 'Book metadata (passage labels)' };
         }
+        if (j._format === 'ib-tokens-1' && j._meta?.book) {
+          return { role: 'source', book: normaliseBookId(String(j._meta.book)), reason: 'Source-text tokens (bundled word list)' };
+        }
         const keys = Object.keys(j).filter((k) => !k.startsWith('_'));
         const m = keys.length ? /^([1-3]?[A-Za-z]+)[.\s]\d+[.:]\d+$/.exec(keys[0]) : null;
         if (m && Array.isArray(j[keys[0]])) return { role: 'source', book: normaliseBookId(m[1]), reason: 'Source-text tokens keyed by verse' };

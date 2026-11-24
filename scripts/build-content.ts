@@ -5,7 +5,8 @@
  *
  * content/
  *   catalog.json                         translations + source texts (per testament, default first)
- *   sources/<sourceId>/<BOOK>.json       source tokens (npm run sources)
+ *   library/<sourceId>/<BOOK>.json       bundled word lists of all 66 books (npm run sources -- --all)
+ *   sources/<sourceId>/<BOOK>.json       optional curated word list that overrides the library
  *   maps/<from>__<to>/<BOOK>.json        token maps between editions (npm run maps)
  *   translations/<translationId>/*.usfm  aligned (\zaln) and optional semantic (\zsem) USFM,
  *                                        any file names; the book comes from \id
@@ -14,12 +15,12 @@
  * Each book is published once per source text that has token data:
  *   public/data/<translation>/<BOOK>/<source>/book.json, <c>.json
  */
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildEditions, mapKey, sourcesFor } from '../src/lib/pipeline/editions';
 import type { Catalog, CatalogBook, Issue } from '../src/lib/pipeline/types';
 import { bookInfo } from '../src/lib/pipeline/books';
-import { ROOT, input, loadCatalog, loadMap, rel, scanTranslation, tokenFiles, tokenPath, type ScanIssue } from './content-index';
+import { LIBRARY, ROOT, input, loadCatalog, loadMap, rel, scanTranslation, tokenFiles, tokenPath, type ScanIssue } from './content-index';
 
 const OUT = join(ROOT, 'public', 'data');
 const check = process.argv.includes('--check');
@@ -111,6 +112,13 @@ for (const tr of cat.translations) {
       for (const ch of r.chapters) writeFileSync(join(bdir, `${ch.c}.json`), JSON.stringify(ch));
     }
   }
+}
+
+// the bundled word lists of every book, for the in-app importer (fetched one book at a time)
+if (!check && existsSync(LIBRARY)) {
+  cpSync(LIBRARY, join(OUT, 'library'), { recursive: true });
+  const n = readdirSync(LIBRARY).reduce((s, d) => s + readdirSync(join(LIBRARY, d)).length, 0);
+  console.log(`- library: ${n} word list(s) copied to public/data/library`);
 }
 
 books.sort((a, b) => a.translation.localeCompare(b.translation) || a.order - b.order || Number(!!b.edition?.primary) - Number(!!a.edition?.primary));

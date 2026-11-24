@@ -1,21 +1,25 @@
 /**
- * npm run sources -- <BOOK> [<BOOK> …] [--stepbible <dir>] [--tc <dir>] [--force] [--no-maps]
+ * npm run sources -- --all | <BOOK> [<BOOK> …] [--stepbible <dir>] [--tc <dir>] [--force] [--no-maps]
  *
- * Writes the source-token files of every source text the catalog lists for the book's testament:
- *   NT  content/sources/grc-tr/<BOOK>.json    Textus Receptus from STEPBible TAGNT
- *       content/sources/grc-ugnt/<BOOK>.json  UGNT from translationCore resources, glossed via TAGNT
- *   OT  content/sources/hbo-wlc/<BOOK>.json   Leningrad Codex from STEPBible TAHOT
- *       content/sources/hbo-uhb/<BOOK>.json   UHB from translationCore resources, glossed via TAHOT
- * then refreshes content/maps (npm run maps). Existing token files are kept (they may be curated,
- * like Philemon's pilot tokens) unless --force is given.
+ * Writes the bundled word lists (compact "ib-tokens-1" files, src/lib/pipeline/tokens.ts) of every
+ * source text the catalog lists for each book's testament:
+ *   NT  content/library/grc-tr/<BOOK>.json    Textus Receptus from STEPBible TAGNT
+ *       content/library/grc-ugnt/<BOOK>.json  UGNT from translationCore resources, glossed via TAGNT
+ *   OT  content/library/hbo-wlc/<BOOK>.json   Leningrad Codex from STEPBible TAHOT
+ *       content/library/hbo-uhb/<BOOK>.json   UHB from translationCore resources, glossed via TAHOT
+ * then refreshes content/maps (npm run maps). The library is published with the app, so the in-app
+ * importer needs only a book's aligned USFM. Existing files are kept unless --force is given.
+ * A hand-curated list in content/sources/<source>/<BOOK>.json overrides the library.
  *
  * Data folders: --stepbible / STEPBIBLE_DIR (STEPBible-Data checkout) and --tc / TC_RESOURCES
  * (translationCore's resources folder, e.g. ~/translationCore/resources).
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bookInfo, normaliseBookId } from '../../src/lib/pipeline/books';
+import { BOOKS, bookInfo, normaliseBookId } from '../../src/lib/pipeline/books';
+import { encodeTokens, formatTokens } from '../../src/lib/pipeline/tokens';
+import type { RawSourceToken } from '../../src/lib/pipeline/types';
 import { readSource } from '../../src/lib/pipeline/build';
 import { alignTokens } from '../../src/lib/pipeline/remap';
 import type { SourceInfo, TranslationInfo } from '../../src/lib/pipeline/types';
@@ -36,9 +40,9 @@ const stepbible = opt('stepbible') ?? process.env.STEPBIBLE_DIR;
 const tc = opt('tc') ?? process.env.TC_RESOURCES;
 const noMaps = args.includes('--no-maps');
 const force = args.includes('--force');
-const books = args.filter((a) => !a.startsWith('--')).map(normaliseBookId);
+const books = args.includes('--all') ? BOOKS.map((b) => b.id) : args.filter((a) => !a.startsWith('--')).map(normaliseBookId);
 if (!books.length || !stepbible || !tc) {
-  console.error('usage: npm run sources -- <BOOK>… --stepbible <STEPBible-Data dir> --tc <translationCore resources dir>\n(or set STEPBIBLE_DIR and TC_RESOURCES)');
+  console.error('usage: npm run sources -- --all | <BOOK>… --stepbible <STEPBible-Data dir> --tc <translationCore resources dir>\n(or set STEPBIBLE_DIR and TC_RESOURCES)');
   process.exit(2);
 }
 
@@ -85,20 +89,23 @@ function enrich(uw: RawBook, step: RawBook, kind: 'grc' | 'hbo', gloss: (s: stri
   return { ...stats, fallback };
 }
 
+let totalBytes = 0;
 function write(source: string, book: string, raw: RawBook, header: Record<string, unknown>) {
-  const dir = join(CONTENT, 'sources', source);
+  const dir = join(CONTENT, 'library', source);
   mkdirSync(dir, { recursive: true });
   const n = Object.values(raw).reduce((s, l) => s + l.length, 0);
-  // "_meta" is skipped by readSource (not a verse key)
-  writeFileSync(join(dir, `${book}.json`), JSON.stringify({ ...raw, _meta: { book, source, ...header, tokens: n } }, null, 1) + '\n');
-  console.log(`  ${source}/${book}.json  ${n} tokens`);
+  const file = join(dir, `${book}.json`);
+  writeFileSync(file, formatTokens(encodeTokens(raw as Record<string, RawSourceToken[]>, { book, source, ...header, tokens: n })));
+  const bytes = statSync(file).size;
+  totalBytes += bytes;
+  console.log(`  library/${source}/${book}.json  ${n} tokens  ${(bytes / 1024).toFixed(0)} KB`);
 }
 
-/** Should this source file be (re)written? */
+/** Should this library file be (re)written? */
 function wants(source: string, book: string): boolean {
-  const p = join(CONTENT, 'sources', source, `${book}.json`);
+  const p = join(CONTENT, 'library', source, `${book}.json`);
   if (existsSync(p) && !force) {
-    console.log(`  ${source}/${book}.json exists — kept (use --force to regenerate)`);
+    console.log(`  library/${source}/${book}.json exists — kept (use --force to regenerate)`);
     return false;
   }
   return true;
@@ -133,4 +140,5 @@ for (const book of books) {
   }
 }
 
+if (totalBytes) console.log(`written: ${(totalBytes / 1024 / 1024).toFixed(1)} MB`);
 if (!noMaps) refreshMaps();

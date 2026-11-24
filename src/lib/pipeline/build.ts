@@ -12,6 +12,7 @@ import { readAligned, type ReadResult, type RGroup } from './reader';
 import { bookInfo, normaliseBookId } from './books';
 import { findSourceToken, stripPunct } from './match';
 import { normStrong } from './strong';
+import { decodeTokens, isCompactTokens, type CompactTokens } from './tokens';
 
 export { stripPunct };
 
@@ -82,7 +83,8 @@ function parseJson<T>(f: InputFile, issues: Issue[]): T | null {
 
 /** Source tokens keyed by "c:v". Accepts STEPBible-style keys ("Phm.1.1", "PHM 1:1", "1:1"). */
 export function readSource(f: InputFile, issues: Issue[]): Map<string, SourceWord[]> {
-  const raw = parseJson<RawSource>(f, issues);
+  const parsed = parseJson<RawSource | CompactTokens>(f, issues);
+  const raw: RawSource | null = isCompactTokens(parsed) ? decodeTokens(parsed) : (parsed as RawSource | null);
   const out = new Map<string, SourceWord[]>();
   if (!raw) return out;
   for (const [key, toks] of Object.entries(raw)) {

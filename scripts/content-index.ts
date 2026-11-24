@@ -43,7 +43,15 @@ export function scanTranslation(trId: string, issues: ScanIssue[]): Map<string, 
   return byBook;
 }
 
-export const tokenPath = (source: string, book: string) => join(CONTENT, 'sources', source, `${book}.json`);
+export const LIBRARY = join(CONTENT, 'library');
+const overridePath = (source: string, book: string) => join(CONTENT, 'sources', source, `${book}.json`);
+const libraryPath = (source: string, book: string) => join(LIBRARY, source, `${book}.json`);
+
+/** The word list used for a book in a source text: a curated override, else the bundled library. */
+export function tokenPath(source: string, book: string): string {
+  const o = overridePath(source, book);
+  return existsSync(o) ? o : libraryPath(source, book);
+}
 
 /** Token files that exist for the given sources. */
 export function tokenFiles(sources: string[], book: string): Record<string, InputFile> {
