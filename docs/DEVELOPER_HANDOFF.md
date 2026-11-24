@@ -98,8 +98,8 @@ iOS Safari install/offline (Chromium only).
 | # | Gap |
 |---|---|
 | #18 | Remaining NT books — need aligned USFM + TR source tokens |
-| #19 | OT/Hebrew with real data; OSHB morphology decoder (Hebrew codes shown raw today) |
-| #20 | Converter STEPBible TAGNT/TAHOT → source-token JSON (today the tokens come from the pilot) |
+| #19 | OT/Hebrew with real data — tooling done (UHB/WLC tokens, OSHB decoder, UHB⇄WLC remap tested on Ruth tokens with a synthetic alignment); waiting for an aligned OT book |
+| #20 | ~~Converter STEPBible TAGNT/TAHOT → source-token JSON~~ — done: `npm run sources` (also UGNT/UHB from translationCore resources) |
 | #21 | Full Strong's lexicon entries (today: lemma, lemma gloss, decoded morphology) |
 | #22 | Whole-Bible search (today: per book) |
 | #23 | Licensed English word-level links (design's "ESV rendering" per word is not published) |
@@ -121,10 +121,16 @@ published books (local books are already in IndexedDB); the hover bar is hidden 
 | 2026-11-24 | Bugs found by the browser tests and fixed: Svelte state proxies could not be posted to the import worker (now `$state.snapshot`); phone layers menu off-screen; phone header too tall. |
 | 2026-11-24 | Pushed 13 commits to `main`; issues #1–#17 closed by their commits. Enabled GitHub Pages (Actions source). Deploy workflow passed; live site verified. Board: #1–#17 Done, backlog #18–#25 Todo. |
 | — | Note: GitHub warns that actions/checkout@v4, setup-node@v4, upload-artifact@v4 run on deprecated Node 20; bump to their next major versions when convenient. |
+| 2026-11-24 | Source-text editions (branch `feat/source-editions`). Bridge delivers books aligned in translationCore against uW UGNT/UHB; the owner chose to publish both texts and let readers switch, with the UGNT⇄TR / UHB⇄WLC remap automatic and its tables stored in the repo. Added: `npm run sources` (TR/WLC from STEPBible, UGNT/UHB from translationCore resources, glossed via STEPBible), `src/lib/pipeline/{strong,match,remap,editions,sources}.ts`, `npm run maps` → `content/maps/`, per-edition data paths `data/<tr>/<BOOK>/<source>/`, `?src=` routes, source switch in the Reader, preference in Settings, importer builds all editions and bundles maps. uW morphology converted to Robinson/OSHB; OSHB decoder added. First Bridge book: 1 John (1,805 links; TR edition keeps 1,774). Philemon also gets a UGNT edition (322 of 324 links). |
+| 2026-11-24 | Found: the Bridge 1 John file aligns ~150 Greek words in more than one place; kept as shared source words rather than dropped. vitest on Windows finds no tests when started from a lower-case drive path (`d:\…`); run from `D:\…`. |
 
 ## 8. Where to start next
 
 1. Enter an ESV API key in Settings on the live site and check that the English verse appears
    (see §5).
 2. Add the next book through [CONTENT_GUIDE.md](CONTENT_GUIDE.md) (#18); open a PR so CI runs.
-3. For the OT, start with Ruth (aligned in the pilot) and #19/#20.
+3. For the OT, start with Ruth (aligned in the pilot) and #19: `npm run sources -- RUT`, add the
+   aligned USFM, `npm run content:check`.
+4. New Bridge books: copy the `*-aligned.usfm` as is, `npm run sources -- <BOOK>` (see
+   [CONTENT_GUIDE.md](CONTENT_GUIDE.md)); review `content/maps/…/<BOOK>.json` stats and add
+   `overrides` where an automatic link is wrong.

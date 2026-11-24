@@ -11,8 +11,8 @@ cross-verse renderings.
 
 The app is data-driven: it has no book-specific code. Books are added by dropping aligned
 USFM and source-token files into `content/` and pushing, or previewed in the browser with the
-built-in importer. Philemon is the first book with data; others follow as alignment data
-becomes available.
+built-in importer. Philemon and 1 John have data; others follow as alignment data becomes
+available.
 
 ## Features
 
@@ -21,6 +21,9 @@ becomes available.
   other occurrences in the book)
 - **Two word orders** — reverse interlinear (translation order) and interlinear (source order);
   Hebrew reads right to left
+- **Two source texts** — every book in the Textus Receptus / Leningrad Codex (STEPBible) and in
+  unfoldingWord's UGNT / UHB; the text a book was aligned against shows the alignment as made,
+  the other is remapped automatically word by word (maps kept in `content/maps/`)
 - **Layers** — transliteration, English gloss, Strong's, morphology, study marks, English verse
 - **Search** Tamil words, Greek/Hebrew, transliteration, glosses or Strong's numbers
 - **Verse flags** for reviewers, saved on the device, exportable as JSON
@@ -47,9 +50,9 @@ npm run test:e2e     # browser tests against the production build (npx playwrigh
 See **[docs/CONTENT_GUIDE.md](docs/CONTENT_GUIDE.md)**. In short:
 
 ```bash
-cp ROM.aligned.usfm   content/translations/ta-irv/
+cp ROM.aligned.usfm   content/translations/ta-irv/     # Bridge/translationCore files work as they are
 cp ROM.semantic.usfm  content/translations/ta-irv/     # optional
-cp ROM.json           content/sources/grc-tr/
+npm run sources -- ROM --stepbible <dir> --tc <dir>     # source tokens for TR + UGNT, and token maps
 npm run content:check                                   # must report 0 errors
 git add content && git commit -m "content(ROM): add Romans" && git push
 ```
