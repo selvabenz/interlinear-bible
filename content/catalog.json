@@ -11,8 +11,14 @@
       "attribution": "Bridge Connectivity Solutions",
       "url": "https://creativecommons.org/licenses/by-sa/4.0/",
       "sources": {
-        "NT": "grc-tr",
-        "OT": "hbo-wlc"
+        "NT": [
+          "grc-tr",
+          "grc-ugnt"
+        ],
+        "OT": [
+          "hbo-wlc",
+          "hbo-uhb"
+        ]
       }
     }
   ],
@@ -25,7 +31,20 @@
       "dir": "ltr",
       "licence": "CC BY 4.0",
       "attribution": "Greek text, Strong's, morphology, glosses and transliteration from STEPBible TAGNT (Tyndale House, Cambridge)",
-      "url": "https://github.com/STEPBible/STEPBible-Data"
+      "url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "stepbible"
+    },
+    {
+      "id": "grc-ugnt",
+      "name": "unfoldingWord Greek New Testament (UGNT)",
+      "shortName": "UGNT",
+      "language": "grc",
+      "dir": "ltr",
+      "licence": "CC BY-SA 4.0",
+      "attribution": "Greek text, lemmas, Strong's and morphology from the unfoldingWord® Greek New Testament (unfoldingWord, via translationCore); English glosses and transliteration matched from STEPBible TAGNT, otherwise the unfoldingWord Greek Lexicon",
+      "url": "https://git.door43.org/unfoldingWord/el-x-koine_ugnt",
+      "format": "uw",
+      "version": "0.34"
     },
     {
       "id": "hbo-wlc",
@@ -35,7 +54,20 @@
       "dir": "rtl",
       "licence": "CC BY 4.0",
       "attribution": "Hebrew text, Strong's, morphology and glosses from STEPBible TAHOT (Tyndale House, Cambridge)",
-      "url": "https://github.com/STEPBible/STEPBible-Data"
+      "url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "stepbible"
+    },
+    {
+      "id": "hbo-uhb",
+      "name": "unfoldingWord Hebrew Bible (UHB)",
+      "shortName": "UHB",
+      "language": "hbo",
+      "dir": "rtl",
+      "licence": "CC BY-SA 4.0",
+      "attribution": "Hebrew text, lemmas, Strong's and morphology from the unfoldingWord® Hebrew Bible (unfoldingWord, via translationCore); English glosses and transliteration matched from STEPBible TAHOT, otherwise the unfoldingWord Hebrew Lexicon",
+      "url": "https://git.door43.org/unfoldingWord/hbo_uhb",
+      "format": "uw",
+      "version": "3.0.0"
     }
   ]
 }
