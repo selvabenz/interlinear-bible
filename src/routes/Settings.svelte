@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import type { Catalog } from '../lib/pipeline/types';
   import { loadCatalog } from '../lib/data/loader';
+  import { sourcesFor } from '../lib/pipeline/sources';
   import { LABELS } from '../lib/i18n/labels';
   import { prefs, resetPrefs } from '../lib/stores/prefs.svelte';
   import { flags, exportFlags, importFlags, clearAllFlags } from '../lib/stores/flags.svelte';
@@ -46,6 +47,14 @@
   });
 
   let catalog = $state.raw<Catalog | null>(null);
+  /** per testament: the translation's source texts, when there is a choice and books to read */
+  const sourceChoices = $derived.by(() => {
+    const tr = catalog?.translations.find((t) => t.id === prefs.translation) ?? catalog?.translations[0];
+    if (!tr || !catalog) return [];
+    return (['NT', 'OT'] as const)
+      .map((t) => ({ t, ids: sourcesFor(tr, t).filter((id) => catalog!.books.some((b) => b.translation === tr.id && b.testament === t && b.source === id)) }))
+      .filter((g) => g.ids.length > 1);
+  });
   let keyMsg = $state('');
   let flagMsg = $state('');
   let storage = $state('');
@@ -129,6 +138,26 @@
         </div>
       </div>
     </section>
+
+    {#if sourceChoices.length}
+      <section class="card sec" data-testid="source-settings">
+        <h2>{L.sourceText}</h2>
+        <p class="muted">{L.sourceHelp}</p>
+        {#each sourceChoices as g (g.t)}
+          <div class="field">
+            <span class="label">{g.t === 'NT' ? L.sourceGreek : L.sourceHebrew}</span>
+            <div class="seg">
+              {#each g.ids as id, k (id)}
+                <button
+                  aria-pressed={(prefs.sources[g.t] ?? g.ids[0]) === id}
+                  onclick={() => (prefs.sources = { ...prefs.sources, [g.t]: id })}
+                >{catalog?.sources.find((s) => s.id === id)?.shortName ?? id}{k === 0 ? ` (${L.sourceDefault})` : ''}</button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </section>
+    {/if}
 
     <section class="card sec">
       <h2>{T.english}</h2>

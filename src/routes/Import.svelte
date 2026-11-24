@@ -19,7 +19,7 @@
       : 'Add or update a book. Files are checked here in your browser; nothing is uploaded.',
     need: ta
       ? 'தேவை: \\zaln இணைப்புள்ள USFM. விருப்பம்: \\zsem சொற்பொருள் USFM, மூலச்சொல் JSON (ஏற்கனவே வெளியிடப்பட்ட புத்தகத்திற்குத் தேவையில்லை), <BOOK>.meta.json. .zip கோப்பும் ஏற்கப்படும்.'
-      : 'Needed: USFM with \\zaln word alignment. Optional: USFM with \\zsem semantic units, source-token JSON (not needed for a book that is already published), <BOOK>.meta.json passage labels. A .zip of these works too.',
+      : 'Needed: USFM with \\zaln word alignment (translationCore / Bridge files aligned to UGNT or UHB work as they are). Optional: USFM with \\zsem semantic units, source-token JSON (not needed for a book that is already published), <BOOK>.meta.json passage labels. A .zip of these works too. The book is checked once per source text: as aligned, and remapped automatically to each other source text.',
     translation: ta ? 'மொழிபெயர்ப்பு' : 'Translation',
     choose: ta ? 'கோப்புகளைத் தேர்ந்தெடு' : 'Choose files',
     drop: ta ? 'அல்லது இங்கே இழுத்து விடவும்' : 'or drop them here',
@@ -44,6 +44,12 @@
     errors: ta ? 'பிழைகள்' : 'errors',
     warnings: ta ? 'எச்சரிக்கைகள்' : 'warnings',
     back: ta ? '‹ நூலகம்' : '‹ Library',
+    asAligned: ta ? 'இணைத்தபடியே' : 'as aligned',
+    remapped: (from: string) => (ta ? `${from} இலிருந்து தானாக மாற்றப்பட்டது` : `remapped from ${from}`),
+    remapStats: (kept: number, dropped: number, cross: number) =>
+      ta
+        ? `${kept} இணைப்புகள் மாற்றப்பட்டன · ${dropped} இணையில்லை · ${cross} வேறு வசனத்திற்கு`
+        : `${kept} links carried over · ${dropped} without a counterpart · ${cross} into another verse`,
     role: { aligned: 'aligned USFM', semantic: 'semantic USFM', source: 'source tokens', meta: 'book metadata', unknown: '—' } as Record<string, string>
   });
 
@@ -96,17 +102,20 @@
     busy = false;
   }
 
+  const rkey = (r: WorkerBookResult) => `${r.book}/${r.sourceId}`;
+  const srcName = (id: string) => catalog?.sources.find((s) => s.id === id)?.shortName ?? id;
+
   async function save(r: WorkerBookResult) {
     if (!r.result.book || !r.result.chapters) return;
     await saveLocalBook({ book: r.result.book, chapters: r.result.chapters, files: r.files, importedAt: new Date().toISOString() });
-    forgetBook(translation, r.book);
-    savedKeys[r.book] = true;
+    forgetBook(translation, r.book, r.sourceId);
+    savedKeys[rkey(r)] = true;
     refreshLocal();
   }
 
   async function removeLocal(b: BookMeta) {
-    await deleteLocalBook(b.translation, b.id);
-    forgetBook(b.translation, b.id);
+    await deleteLocalBook(b.translation, b.id, b.source);
+    forgetBook(b.translation, b.id, b.source);
     refreshLocal();
   }
 
@@ -185,12 +194,14 @@
           <ul>{#each m.need as n (n)}<li>{n}</li>{/each}</ul>
         </div>
       {/each}
-      {#each res.books as r (r.book)}
+      {#each res.books as r (rkey(r))}
         {@const s = r.result.book?.stats}
+        {@const ed = r.result.book?.edition}
         <div class="result card" class:bad={!r.result.ok}>
           <div class="rhead">
             <strong>{r.result.book?.name.native ?? r.book}</strong>
-            <span class="mono">{r.book} · {translation} · {r.sourceId}</span>
+            <span class="mono">{r.book} · {translation} · {srcName(r.sourceId)}</span>
+            <span class="pill">{r.primary ? T.asAligned : T.remapped(srcName(r.alignedTo))}</span>
             <span class="pill {r.result.ok ? 'ok' : 'flag'}">{r.result.ok ? T.ok : T.failed}</span>
             <span class="mono small">{count(r, 'error')} {T.errors} · {count(r, 'warning')} {T.warnings}</span>
           </div>
@@ -198,6 +209,9 @@
             <div class="mono stats">
               {s.verses} v · {s.sourceWords} src · {s.targetWords} tgt · {s.groups} groups · {s.units} units · {s.findings} findings
             </div>
+          {/if}
+          {#if ed && !ed.primary}
+            <div class="mono stats">{T.remapStats(ed.kept ?? 0, ed.dropped ?? 0, ed.crossVerse ?? 0)}</div>
           {/if}
           {#if r.result.issues.length}
             <ul class="issues">
@@ -208,13 +222,15 @@
           {/if}
           {#if r.result.ok}
             <div class="actions">
-              {#if savedKeys[r.book]}
-                <a class="btn primary" href={href({ name: 'read', translation, book: r.book })}>{T.open}</a>
+              {#if savedKeys[rkey(r)]}
+                <a class="btn primary" href={href({ name: 'read', translation, book: r.book, src: r.sourceId })}>{T.open}</a>
                 <span class="pill ok">{T.saved}</span>
               {:else}
                 <button class="btn primary" onclick={() => save(r)}>{T.save}</button>
               {/if}
-              <button class="btn" onclick={() => download(contentBundle(translation, r), `${translation}-${r.book}-content.zip`)}>{T.bundle}</button>
+              {#if r.primary}
+                <button class="btn" onclick={() => download(contentBundle(translation, r), `${translation}-${r.book}-content.zip`)}>{T.bundle}</button>
+              {/if}
             </div>
           {/if}
         </div>
@@ -225,10 +241,10 @@
       <h2>{T.onDevice}</h2>
       {#if local.length}
         <ul class="local">
-          {#each local as b (b.translation + b.id)}
+          {#each local as b (b.translation + b.id + b.source)}
             <li>
-              <a href={href({ name: 'read', translation: b.translation, book: b.id })}>{b.name.native}</a>
-              <span class="mono">{b.translation}/{b.id} · {b.builtAt.slice(0, 10)}</span>
+              <a href={href({ name: 'read', translation: b.translation, book: b.id, src: b.source })}>{b.name.native}</a>
+              <span class="mono">{b.translation}/{b.id} · {srcName(b.source)} · {b.builtAt.slice(0, 10)}</span>
               <button class="btn ghost danger" onclick={() => removeLocal(b)}>{T.remove}</button>
             </li>
           {/each}

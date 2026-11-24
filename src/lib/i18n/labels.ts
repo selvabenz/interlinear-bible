@@ -103,7 +103,16 @@ const en = {
   heroBody:
     'Each word of the translation stands over the Greek or Hebrew it renders, with its Strong’s number, morphology and transliteration. Switch between the translation’s order (reverse interlinear) and the original’s order (interlinear).',
   booksAvailable: (n: number) => `${n} book${n === 1 ? '' : 's'} available`,
-  translation: 'Translation'
+  translation: 'Translation',
+  sourceText: 'Source text',
+  sourceGreek: 'Greek New Testament',
+  sourceHebrew: 'Hebrew Old Testament',
+  sourceDefault: 'Default',
+  sourceHelp:
+    'Each book is published once per source text. The edition a book was aligned against shows the alignment as made; the others are remapped automatically, word by word.',
+  editionRemapped: (from: string, dropped: number) =>
+    `Alignment remapped automatically from ${from}${dropped ? ` · ${dropped} source word${dropped === 1 ? '' : 's'} had no counterpart` : ''}.`,
+  editionStudyMarks: (src: string) => `Study marks are in the ${src} edition.`
 };
 
 type Labels = typeof en;
@@ -206,7 +215,16 @@ const ta: Labels = {
   heroBody:
     'மொழிபெயர்ப்பின் ஒவ்வொரு சொல்லும் அது மொழிபெயர்க்கும் கிரேக்க அல்லது எபிரெயச் சொல்லின் மேல், ஸ்ட்ராங்ஸ் எண், இலக்கண வடிவம், ஒலிபெயர்ப்புடன் நிற்கிறது. மொழிபெயர்ப்பின் வரிசைக்கும் (தலைகீழ் இடைவரி) மூலமொழியின் வரிசைக்கும் (இடைவரி) மாறலாம்.',
   booksAvailable: (n: number) => `${n} புத்தகம் கிடைக்கிறது`,
-  translation: 'மொழிபெயர்ப்பு'
+  translation: 'மொழிபெயர்ப்பு',
+  sourceText: 'மூல பாடம்',
+  sourceGreek: 'கிரேக்க புதிய ஏற்பாடு',
+  sourceHebrew: 'எபிரெய பழைய ஏற்பாடு',
+  sourceDefault: 'இயல்பு',
+  sourceHelp:
+    'ஒவ்வொரு புத்தகமும் ஒவ்வொரு மூல பாடத்திற்கும் தனியாக வெளியிடப்படுகிறது. எந்தப் பாடத்துடன் இணைக்கப்பட்டதோ அது இணைத்தபடியே காட்டப்படும்; மற்றவை சொல்லுக்குச் சொல் தானாக மாற்றியமைக்கப்படுகின்றன.',
+  editionRemapped: (from: string, dropped: number) =>
+    `இணைப்பு ${from} இலிருந்து தானாக மாற்றியமைக்கப்பட்டது${dropped ? ` · ${dropped} மூலச்சொற்களுக்கு இணை இல்லை` : ''}.`,
+  editionStudyMarks: (src: string) => `ஆய்வுக் குறிப்புகள் ${src} பதிப்பில் உள்ளன.`
 };
 
 export const LABELS: Record<UiLang, Labels> = { en, ta };

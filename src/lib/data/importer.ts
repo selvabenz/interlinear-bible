@@ -6,6 +6,9 @@ import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 import type { InputFile } from '../pipeline/build';
 import type { Chapter, RawSource, RawSourceToken } from '../pipeline/types';
 import { classifyFile } from '../pipeline/classify';
+import { bookInfo } from '../pipeline/books';
+import { sourcesFor, sourceIdOfTokens } from '../pipeline/sources';
+import { formatMapFile } from '../pipeline/remap';
 import { loadCatalog, chapterUrl, bookUrl } from './loader';
 import type { WorkerRequest, WorkerResponse, WorkerBookResult } from '../import.worker';
 
@@ -27,13 +30,13 @@ export async function readFiles(list: FileList | File[]): Promise<InputFile[]> {
   return out;
 }
 
-/** Rebuild a book's source-token file from its published chapters (for USFM-only updates). */
-export async function publishedSource(translation: string, book: string): Promise<InputFile | null> {
+/** Rebuild one edition's source-token file from its published chapters (for USFM-only updates). */
+export async function publishedSource(translation: string, book: string, source: string): Promise<InputFile | null> {
   try {
-    const meta = await (await fetch(bookUrl(translation, book))).json();
-    const raw: RawSource = {};
+    const meta = await (await fetch(bookUrl(translation, book, source))).json();
+    const raw: RawSource & { _meta?: unknown } = {};
     for (const { c } of meta.chapters as { c: number }[]) {
-      const ch = (await (await fetch(chapterUrl(translation, book, c))).json()) as Chapter;
+      const ch = (await (await fetch(chapterUrl(translation, book, source, c))).json()) as Chapter;
       for (const v of ch.verses) {
         raw[`${book}.${v.c}.${v.v}`] = v.s.map(
           (s): RawSourceToken => ({
@@ -52,32 +55,43 @@ export async function publishedSource(translation: string, book: string): Promis
         );
       }
     }
-    return { name: `${book}.json (from the published data)`, text: JSON.stringify(raw) };
+    raw._meta = { book, source, from: 'published data' };
+    return { name: `${book}.${source}.json ${PUBLISHED}`, text: JSON.stringify(raw) };
   } catch {
     return null;
   }
 }
 
+const PUBLISHED = '(from the published data)';
+
 export async function runImport(files: InputFile[], translation: string): Promise<WorkerResponse> {
   const catalog = await loadCatalog().catch(() => null);
   const sources = catalog?.translations.find((t) => t.id === translation)?.sources ?? { NT: 'grc-tr', OT: 'hbo-wlc' };
-  // books given as USFM without source tokens: reuse the published source text when there is one
+  const sourceInfo = catalog?.sources ?? [];
+  // source texts not supplied with the USFM: reuse each published edition's tokens
   const roles = files.map((f) => classifyFile(f.name, f.text));
   const usfmBooks = new Set(roles.filter((r) => r.role === 'aligned' && r.book).map((r) => r.book!));
-  const srcBooks = new Set(roles.filter((r) => r.role === 'source' && r.book).map((r) => r.book!));
   const extra: InputFile[] = [];
   for (const b of usfmBooks) {
-    if (srcBooks.has(b)) continue;
-    if (!catalog?.books.some((x) => x.translation === translation && x.id === b)) continue;
-    const src = await publishedSource(translation, b);
-    if (src) extra.push(src);
+    const info = bookInfo(b);
+    if (!info) continue;
+    const ids = sourcesFor({ sources }, info.testament);
+    const supplied = new Set(
+      files.filter((_f, k) => roles[k].role === 'source' && roles[k].book === b).map((f) => sourceIdOfTokens(f.text, ids, sourceInfo))
+    );
+    for (const id of ids) {
+      if (supplied.has(id)) continue;
+      if (!catalog?.books.some((x) => x.translation === translation && x.id === b && x.source === id)) continue;
+      const src = await publishedSource(translation, b, id);
+      if (src) extra.push(src);
+    }
   }
   const worker = new Worker(new URL('../import.worker.ts', import.meta.url), { type: 'module' });
   try {
     return await new Promise<WorkerResponse>((resolve, reject) => {
       worker.onmessage = (e) => resolve(e.data as WorkerResponse);
       worker.onerror = (e) => reject(new Error(e.message || 'import worker failed'));
-      const req: WorkerRequest = { files: [...files, ...extra], translation, sources };
+      const req: WorkerRequest = { files: [...files, ...extra], translation, sources, sourceInfo };
       worker.postMessage(req);
     });
   } finally {
@@ -85,17 +99,19 @@ export async function runImport(files: InputFile[], translation: string): Promis
   }
 }
 
-/** A zip laid out like the repository's content/ folder, ready to commit. */
+/** A zip laid out like the repository's content/ folder, ready to commit (all editions of the book). */
 export function contentBundle(translation: string, r: WorkerBookResult): Blob {
   const files: Record<string, Uint8Array> = {};
   for (const f of r.files) {
     if (f.role === 'source') {
-      if (f.name.includes('(from the published data)')) continue; // already in the repo
-      files[`content/sources/${r.sourceId}/${r.book}.json`] = strToU8(f.text);
+      if (f.name.includes(PUBLISHED)) continue; // already in the repo
+      files[`content/sources/${f.source ?? r.sourceId}/${r.book}.json`] = strToU8(f.text);
     } else if (f.role === 'aligned') files[`content/translations/${translation}/${r.book}.aligned.usfm`] = strToU8(f.text);
     else if (f.role === 'semantic') files[`content/translations/${translation}/${r.book}.semantic.usfm`] = strToU8(f.text);
     else if (f.role === 'meta') files[`content/translations/${translation}/${r.book}.meta.json`] = strToU8(f.text);
   }
+  // token maps between the editions; hashes refer to the token files above / in the repo
+  for (const [key, map] of Object.entries(r.maps ?? {})) files[`content/maps/${key}/${r.book}.json`] = strToU8(formatMapFile(map));
   files['PUBLISHING.txt'] = strToU8(
     [
       `Content bundle for ${translation}/${r.book}, prepared by the Interlinear Bible importer on ${new Date().toISOString()}.`,

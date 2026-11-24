@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { BookMeta, Catalog, CatalogBook } from '../lib/pipeline/types';
   import { BOOKS } from '../lib/pipeline/books';
-  import { loadCatalog, bookUrl, saveForOffline, isSavedOffline } from '../lib/data/loader';
+  import { loadCatalog, bookUrl, saveForOffline, isSavedOffline, editionsOf, pickEdition } from '../lib/data/loader';
   import { listLocalBooks } from '../lib/data/local';
   import { LABELS } from '../lib/i18n/labels';
   import { prefs } from '../lib/stores/prefs.svelte';
@@ -32,27 +32,37 @@
     en: string;
     native: string;
     testament: 'OT' | 'NT';
+    /** the edition the card opens: the reader's preferred source text if published, else the default */
+    source?: string;
+    /** every source text the book is available in, default first */
+    editions: string[];
     data?: CatalogBook;
     local?: boolean;
   }
 
+  const srcName = (id: string) => catalog?.sources.find((s) => s.id === id)?.shortName ?? id;
+
   const entries = $derived.by(() => {
-    const pub = new Map((catalog?.books ?? []).filter((b) => b.translation === trId).map((b) => [b.id, b]));
-    const loc = new Map(local.filter((b) => b.translation === trId).map((b) => [b.id, b]));
+    const pub = (catalog?.books ?? []).filter((b) => b.translation === trId);
+    const loc = local.filter((b) => b.translation === trId);
     return BOOKS.map((info): Entry => {
-      const lb = loc.get(info.id);
+      const editions = editionsOf(catalog, trId, info.id, info.testament, loc);
+      const source = pickEdition(editions, undefined, prefs.sources[info.testament]);
+      const lb = loc.find((b) => b.id === info.id && b.source === source);
       const data: CatalogBook | undefined = lb
         ? {
-            id: lb.id, translation: lb.translation, name: lb.name, testament: lb.testament, order: lb.order,
-            chapters: lb.chapters.length, verses: lb.stats.verses, hasSemantic: lb.hasSemantic, hash: lb.hash,
-            findings: lb.stats.findings, units: lb.stats.units
+            id: lb.id, translation: lb.translation, source: lb.source, edition: lb.edition, name: lb.name,
+            testament: lb.testament, order: lb.order, chapters: lb.chapters.length, verses: lb.stats.verses,
+            hasSemantic: lb.hasSemantic, hash: lb.hash, findings: lb.stats.findings, units: lb.stats.units
           }
-        : pub.get(info.id);
+        : pub.find((b) => b.id === info.id && b.source === source);
       return {
         id: info.id,
         en: info.en,
         native: data?.name.native ?? (translation?.language === 'ta' ? info.ta : info.en),
         testament: info.testament,
+        source,
+        editions,
         data,
         local: !!lb
       };
@@ -71,11 +81,12 @@
   );
 
   async function offline(e: Entry) {
-    const k = `${trId}/${e.id}`;
+    if (!e.source) return;
+    const k = `${trId}/${e.id}/${e.source}`;
     try {
       saving[k] = L.offlineSaving;
-      const meta = (await (await fetch(bookUrl(trId, e.id))).json()) as BookMeta;
-      await saveForOffline(trId, e.id, meta.chapters.map((c) => c.c), (d, t) => (saving[k] = `${L.offlineSaving} ${d}/${t}`));
+      const meta = (await (await fetch(bookUrl(trId, e.id, e.source))).json()) as BookMeta;
+      await saveForOffline(trId, e.id, e.source, meta.chapters.map((c) => c.c), (d, t) => (saving[k] = `${L.offlineSaving} ${d}/${t}`));
       saving[k] = L.offlineSaved;
     } catch (err) {
       saving[k] = (err as Error).message;
@@ -135,7 +146,7 @@
         <div class="grid">
           {#each g.books as e (e.id)}
             {#if e.data}
-              {@const k = `${trId}/${e.id}`}
+              {@const k = `${trId}/${e.id}/${e.source}`}
               <article class="book card">
                 <div class="btop">
                   <div>
@@ -150,13 +161,18 @@
                   {#if e.data.hasSemantic}<span>{e.data.units} {L.units}</span>{/if}
                   {#if e.data.findings}<span class="fl">◆ {e.data.findings}</span>{/if}
                 </div>
+                {#if e.editions.length > 1}
+                  <div class="beds mono" aria-label={L.sourceText}>
+                    {#each e.editions as s (s)}<span class:on={s === e.source}>{srcName(s)}</span>{/each}
+                  </div>
+                {/if}
                 <div class="bactions">
                   <a class="btn primary" href={href({ name: 'read', translation: trId, book: e.id })}>{L.openReading}</a>
                   <a class="btn" href={href({ name: 'study', translation: trId, book: e.id })}>{L.openStudy}</a>
                   <span class="grow"></span>
                   {#if !e.local}
                     <button class="btn ghost off" title={L.offline} onclick={() => offline(e)}>
-                      {saving[k] ?? (isSavedOffline(trId, e.id) ? '✓ ' + L.offlineSaved : '↓ ' + L.offline)}
+                      {saving[k] ?? (e.source && isSavedOffline(trId, e.id, e.source) ? '✓ ' + L.offlineSaved : '↓ ' + L.offline)}
                     </button>
                   {/if}
                 </div>
@@ -333,6 +349,17 @@
   }
   .bstats .fl {
     color: var(--mark);
+  }
+  .beds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    font-size: 10.5px;
+    color: var(--muted-3);
+  }
+  .beds span.on {
+    color: var(--ink, inherit);
+    font-weight: 600;
   }
   .bactions {
     display: flex;

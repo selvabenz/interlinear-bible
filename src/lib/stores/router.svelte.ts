@@ -1,13 +1,15 @@
 /**
  * Hash router — deep links work on static hosting (GitHub Pages) without server rewrites.
  *   #/                                 library
- *   #/read/<translation>/<BOOK>/<passage>?w=<word>
- *   #/study/<translation>/<BOOK>/<passage>?w=<word>
+ *   #/read/<translation>/<BOOK>/<passage>?src=<source>&w=<word>
+ *   #/study/<translation>/<BOOK>/<passage>?src=<source>&w=<word>
+ *   (src picks the source-text edition, e.g. grc-tr / grc-ugnt; without it the reader's
+ *   preferred or the default edition opens)
  *   #/import   #/settings
  */
 export type Route =
   | { name: 'library' }
-  | { name: 'read' | 'study'; translation: string; book: string; passage?: string; w?: string }
+  | { name: 'read' | 'study'; translation: string; book: string; passage?: string; w?: string; src?: string }
   | { name: 'import' }
   | { name: 'settings' }
   | { name: 'notfound'; path: string };
@@ -19,7 +21,10 @@ export function parseHash(hash: string): Route {
   const q = new URLSearchParams(query);
   if (!parts.length) return { name: 'library' };
   if ((parts[0] === 'read' || parts[0] === 'study') && parts.length >= 3) {
-    return { name: parts[0], translation: parts[1], book: parts[2].toUpperCase(), passage: parts[3], w: q.get('w') ?? undefined };
+    return {
+      name: parts[0], translation: parts[1], book: parts[2].toUpperCase(), passage: parts[3],
+      w: q.get('w') ?? undefined, src: q.get('src') ?? undefined
+    };
   }
   if (parts[0] === 'import') return { name: 'import' };
   if (parts[0] === 'settings') return { name: 'settings' };
@@ -33,7 +38,11 @@ export function href(r: Route): string {
     case 'read':
     case 'study': {
       const p = [r.name, r.translation, r.book, r.passage].filter(Boolean).map((x) => encodeURIComponent(x!)).join('/');
-      return `#/${p}${r.w ? `?w=${encodeURIComponent(r.w)}` : ''}`;
+      const q = new URLSearchParams();
+      if (r.src) q.set('src', r.src);
+      if (r.w) q.set('w', r.w);
+      const qs = q.toString();
+      return `#/${p}${qs ? `?${qs}` : ''}`;
     }
     case 'import':
       return '#/import';

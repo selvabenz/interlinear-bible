@@ -5,8 +5,10 @@
    */
   import { onMount, tick } from 'svelte';
   import type { Catalog } from '../lib/pipeline/types';
-  import { loadBook, loadCatalog, forgetBook, LoadedBook } from '../lib/data/loader';
-  import { deleteLocalBook } from '../lib/data/local';
+  import { loadBook, loadCatalog, forgetBook, LoadedBook, editionsOf, pickEdition } from '../lib/data/loader';
+  import { deleteLocalBook, listLocalBooks } from '../lib/data/local';
+  import { bookInfo } from '../lib/pipeline/books';
+  import { sourcesFor } from '../lib/pipeline/sources';
   import {
     passageVerses, passageChapters, referencedChapters, verseItems, verseNotes, detailFor, occurrences,
     passageMap, passageLabel, passageRange, passageOf, keyRef, unitAnchor, unitStatus,
@@ -39,6 +41,9 @@
   let esv = $state<Record<string, string> | null>(null);
   let esvErr = $state('');
   let scrollTarget: string | null = null;
+  /** source texts this book is available in (default first) */
+  let editions = $state.raw<string[]>([]);
+  const testament = $derived(bookInfo(route.book)?.testament ?? 'NT');
 
   const mode = $derived(route.name);
   const meta = $derived(book?.meta);
@@ -53,6 +58,13 @@
   const deck = $derived(
     [translation?.shortName ?? translation?.name ?? route.translation, sourceInfo?.shortName ?? sourceInfo?.name ?? ''].filter(Boolean).join(' · ')
   );
+  const srcName = (id: string | undefined) => (id ? catalog?.sources.find((s) => s.id === id)?.shortName ?? id : '');
+  /** a derived edition: its alignment was remapped from the source text it was made against */
+  const remapNote = $derived.by(() => {
+    const ed = meta?.edition;
+    if (!ed || ed.primary || !ed.from) return '';
+    return L.editionRemapped(srcName(ed.from), ed.dropped ?? 0) + (ed.semanticOmitted ? ' ' + L.editionStudyMarks(srcName(ed.from)) : '');
+  });
 
   const verses = $derived.by(() => {
     void version;
@@ -83,10 +95,15 @@
 
   // ---------------------------------------------------------------- loading
   onMount(() => {
-    loadCatalog().then((c) => (catalog = c)).catch(() => {});
-    loadBook(route.translation, route.book)
-      .then((b) => (book = b))
-      .catch((e) => (error = `${L.loadError} (${(e as Error).message})`));
+    (async () => {
+      const c = await loadCatalog().catch(() => null);
+      catalog = c;
+      const local = await listLocalBooks();
+      editions = editionsOf(c, route.translation, route.book, testament, local);
+      const tr = c?.translations.find((t) => t.id === route.translation);
+      const source = pickEdition(editions, route.src, prefs.sources[testament]) ?? route.src ?? sourcesFor(tr, testament)[0];
+      book = await loadBook(route.translation, route.book, source);
+    })().catch((e) => (error = `${L.loadError} (${(e as Error).message})`));
     const onResize = () => (narrow = window.innerWidth < 900);
     onResize();
     window.addEventListener('resize', onResize);
@@ -158,7 +175,20 @@
 
   // ---------------------------------------------------------------- actions
   function routeTo(name: 'read' | 'study', passageId?: string, w?: string) {
-    go({ name, translation: route.translation, book: route.book, passage: passageId, w });
+    go({ name, translation: route.translation, book: route.book, passage: passageId, w, src: route.src });
+  }
+
+  /** Open the same passage in another source-text edition and remember the choice. */
+  function switchSource(id: string) {
+    if (!meta || id === meta.source) return;
+    // translation-word keys are the same in every edition; source-word keys are not
+    let w = sel ?? undefined;
+    if (w?.startsWith('s:') && book) {
+      const sw = book.source(w.slice(2));
+      w = sw?.tgt[0] ? `t:${sw.tgt[0]}` : undefined;
+    }
+    prefs.sources = { ...prefs.sources, [testament]: id };
+    go({ name: mode, translation: route.translation, book: route.book, passage: passage?.id, w, src: id });
   }
 
   function selectKey(key: string, scroll = true) {
@@ -249,8 +279,8 @@
 
   async function removeLocal() {
     if (!meta) return;
-    await deleteLocalBook(meta.translation, meta.id);
-    forgetBook(meta.translation, meta.id);
+    await deleteLocalBook(meta.translation, meta.id, meta.source);
+    forgetBook(meta.translation, meta.id, meta.source);
     location.reload();
   }
 
@@ -309,6 +339,20 @@
     <button aria-pressed={prefs.order === 'target'} onclick={() => setOrder('target')}>{L.orderTarget(targetLang)}</button>
     <button aria-pressed={prefs.order === 'source'} onclick={() => setOrder('source')}>{L.orderSource(sourceLang)}</button>
   </div>
+{/snippet}
+
+{#snippet sourceSeg()}
+  {#if editions.length > 1 && meta}
+    <div class="seg" role="group" aria-label={L.sourceText} title={L.sourceText} data-testid="source-switch">
+      {#each editions as s (s)}
+        <button aria-pressed={meta.source === s} onclick={() => switchSource(s)}>{srcName(s)}</button>
+      {/each}
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet editionNote()}
+  {#if remapNote}<p class="edition-note" data-print="hide">{remapNote}</p>{/if}
 {/snippet}
 
 {#snippet libLink()}
@@ -421,6 +465,7 @@
         </div>
         <div class="grow"></div>
         <SearchBox book={book!} {L} {srcRtl} onpick={onSearchPick} />
+        {@render sourceSeg()}
         {@render langSeg()}
         <div class="layers">
           <button class="btn" class:active={layersOpen} onclick={() => (layersOpen = !layersOpen)} aria-expanded={layersOpen}>{L.layers}</button>
@@ -456,6 +501,7 @@
           <span class="grow"></span>
           <span class="order-chip">{prefs.order === 'target' ? L.orderTarget(targetLang) : L.orderSource(sourceLang)}</span>
         </div>
+        {@render editionNote()}
         {@render passageBody()}
         {@render passageNav()}
         <div class="foot">
@@ -496,6 +542,7 @@
         <div class="grow"></div>
         <SearchBox book={book!} {L} {srcRtl} align="right" onpick={onSearchPick} />
         <button class="btn" onclick={() => { prefs.layers.notes = true; setTimeout(() => window.print(), 260); }}>{L.print}</button>
+        {@render sourceSeg()}
         {@render langSeg()}
         {@render viewSeg()}
       </div>
@@ -561,6 +608,7 @@
           <span class="grow"></span>
           <span class="kbd" data-print="hide">{L.kbdHint}</span>
         </div>
+        {@render editionNote()}
         {@render passageBody()}
         {@render passageNav()}
         <div class="foot small">
@@ -839,6 +887,11 @@
   .order-chip {
     font-size: 11px;
     color: var(--muted-6);
+  }
+  .edition-note {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--muted-3);
   }
   .study-main .ptitle {
     margin-bottom: 18px;

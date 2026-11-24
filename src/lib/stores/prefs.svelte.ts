@@ -20,6 +20,8 @@ export interface Prefs {
   railOpen: boolean;
   showAllBooks: boolean;
   translation: string;
+  /** preferred source text per testament (e.g. { NT: 'grc-ugnt' }); unset = the catalog default */
+  sources: { NT?: string; OT?: string };
 }
 
 const KEY = 'ib-prefs';
@@ -32,7 +34,8 @@ const DEFAULTS: Prefs = {
   esvKey: '',
   railOpen: false,
   showAllBooks: false,
-  translation: ''
+  translation: '',
+  sources: {}
 };
 
 function load(): Prefs {
@@ -40,7 +43,7 @@ function load(): Prefs {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      return { ...DEFAULTS, ...p, layers: { ...DEFAULTS.layers, ...(p.layers ?? {}) } };
+      return { ...DEFAULTS, ...p, layers: { ...DEFAULTS.layers, ...(p.layers ?? {}) }, sources: { ...(p.sources ?? {}) } };
     }
   } catch {
     /* private mode or corrupt value: use defaults */

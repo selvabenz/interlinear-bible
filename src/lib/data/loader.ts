@@ -1,9 +1,11 @@
 /**
  * Loads the catalog and books (published under <base>/data/, or imported locally) and keeps
  * a per-book cache of chapters. Chapters load on demand, so the same code serves a one-chapter
- * letter and a 150-chapter book.
+ * letter and a 150-chapter book. A book exists once per source-text edition:
+ *   data/<translation>/<BOOK>/<source>/book.json, <c>.json
  */
-import type { BookMeta, Catalog, Chapter, SourceWord, TargetWord, Unit, Verse } from '../pipeline/types';
+import type { BookMeta, Catalog, CatalogBook, Chapter, SourceWord, TargetWord, Testament, Unit, Verse } from '../pipeline/types';
+import { sourcesFor } from '../pipeline/sources';
 import { getLocalBook } from './local';
 
 const BASE = `${import.meta.env.BASE_URL}data/`;
@@ -25,11 +27,39 @@ export function loadCatalog(force = false): Promise<Catalog> {
   return catalogPromise;
 }
 
-export function chapterUrl(translation: string, book: string, c: number): string {
-  return `${BASE}${translation}/${book}/${c}.json`;
+export function chapterUrl(translation: string, book: string, source: string, c: number): string {
+  return `${BASE}${translation}/${book}/${source}/${c}.json`;
 }
-export function bookUrl(translation: string, book: string): string {
-  return `${BASE}${translation}/${book}/book.json`;
+export function bookUrl(translation: string, book: string, source: string): string {
+  return `${BASE}${translation}/${book}/${source}/book.json`;
+}
+
+/**
+ * The source texts a book is available in, default edition first (the translation's catalog
+ * order for the testament): published editions plus any imported in this browser.
+ */
+export function editionsOf(
+  catalog: Catalog | null | undefined, translation: string, book: string, testament: Testament, local: BookMeta[] = []
+): string[] {
+  const tr = catalog?.translations.find((t) => t.id === translation);
+  const order = sourcesFor(tr, testament);
+  const have = new Set<string>([
+    ...(catalog?.books ?? []).filter((b) => b.translation === translation && b.id === book).map((b) => b.source),
+    ...local.filter((b) => b.translation === translation && b.id === book).map((b) => b.source)
+  ]);
+  const rank = (s: string) => (order.indexOf(s) < 0 ? 99 : order.indexOf(s));
+  return [...have].sort((a, b) => rank(a) - rank(b));
+}
+
+/** The edition to open: the one asked for, else the reader's preferred one, else the default. */
+export function pickEdition(available: string[], asked?: string, preferred?: string): string | undefined {
+  if (asked && available.includes(asked)) return asked;
+  if (preferred && available.includes(preferred)) return preferred;
+  return available[0];
+}
+
+export function catalogEntry(catalog: Catalog | null | undefined, translation: string, book: string, source: string): CatalogBook | undefined {
+  return catalog?.books.find((b) => b.translation === translation && b.id === book && b.source === source);
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -69,7 +99,7 @@ export class LoadedBook {
       want.map((c) => {
         let p = this.pending.get(c);
         if (!p) {
-          p = getJson<Chapter>(chapterUrl(this.meta.translation, this.meta.id, c)).then((ch) => {
+          p = getJson<Chapter>(chapterUrl(this.meta.translation, this.meta.id, this.meta.source, c)).then((ch) => {
             this.add(ch);
             this.pending.delete(c);
             return ch;
@@ -124,14 +154,14 @@ export function inRange(ref: string, start: string, end: string): boolean {
 
 const books = new Map<string, Promise<LoadedBook>>();
 
-export function loadBook(translation: string, bookId: string, force = false): Promise<LoadedBook> {
-  const k = `${translation}/${bookId}`;
+export function loadBook(translation: string, bookId: string, source: string, force = false): Promise<LoadedBook> {
+  const k = `${translation}/${bookId}/${source}`;
   let p = books.get(k);
   if (!p || force) {
     p = (async () => {
-      const local = await getLocalBook(translation, bookId);
+      const local = await getLocalBook(translation, bookId, source);
       if (local) return new LoadedBook(local.book, true, local.chapters);
-      const meta = await getJson<BookMeta>(bookUrl(translation, bookId));
+      const meta = await getJson<BookMeta>(bookUrl(translation, bookId, source));
       return new LoadedBook(meta, false);
     })();
     p.catch(() => books.delete(k));
@@ -140,13 +170,18 @@ export function loadBook(translation: string, bookId: string, force = false): Pr
   return p;
 }
 
-export function forgetBook(translation: string, bookId: string): void {
-  books.delete(`${translation}/${bookId}`);
+/** Drop cached copies: one edition, or every edition of the book. */
+export function forgetBook(translation: string, bookId: string, source?: string): void {
+  for (const k of [...books.keys()]) {
+    if (source ? k === `${translation}/${bookId}/${source}` : k.startsWith(`${translation}/${bookId}/`)) books.delete(k);
+  }
 }
 
 /** Fetch every file of a published book so the service worker caches it for offline use. */
-export async function saveForOffline(translation: string, bookId: string, chapters: number[], onProgress?: (done: number, total: number) => void): Promise<void> {
-  const urls = [bookUrl(translation, bookId), ...chapters.map((c) => chapterUrl(translation, bookId, c))];
+export async function saveForOffline(
+  translation: string, bookId: string, source: string, chapters: number[], onProgress?: (done: number, total: number) => void
+): Promise<void> {
+  const urls = [bookUrl(translation, bookId, source), ...chapters.map((c) => chapterUrl(translation, bookId, source, c))];
   let done = 0;
   for (const u of urls) {
     const r = await fetch(u, { cache: 'reload' });
@@ -155,15 +190,15 @@ export async function saveForOffline(translation: string, bookId: string, chapte
     onProgress?.(++done, urls.length);
   }
   try {
-    localStorage.setItem(`ib-offline:${translation}/${bookId}`, new Date().toISOString());
+    localStorage.setItem(`ib-offline:${translation}/${bookId}/${source}`, new Date().toISOString());
   } catch {
     /* storage unavailable */
   }
 }
 
-export function isSavedOffline(translation: string, bookId: string): boolean {
+export function isSavedOffline(translation: string, bookId: string, source: string): boolean {
   try {
-    return !!localStorage.getItem(`ib-offline:${translation}/${bookId}`);
+    return !!localStorage.getItem(`ib-offline:${translation}/${bookId}/${source}`);
   } catch {
     return false;
   }

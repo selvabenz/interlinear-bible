@@ -34,7 +34,7 @@
 {#if router.route.name === 'library'}
   <Library />
 {:else if router.route.name === 'read' || router.route.name === 'study'}
-  {#key `${router.route.translation}/${router.route.book}`}
+  {#key `${router.route.translation}/${router.route.book}/${router.route.src ?? ''}`}
     <Reader route={router.route} />
   {/key}
 {:else if router.route.name === 'import'}
