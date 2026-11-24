@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#2c6f6b"/>
+  <!-- open book -->
+  <path d="M10 17c6-3 13-3 22 2 9-5 16-5 22-2v31c-6-3-13-3-22 2-9-5-16-5-22-2z" fill="#fffdf8"/>
+  <path d="M32 19v31" stroke="#2c6f6b" stroke-width="2"/>
+  <!-- two lines of text, one over the other: the interlinear -->
+  <g stroke-linecap="round">
+    <path d="M15 25.5h12M37 25.5h12" stroke="#1f2a33" stroke-width="3"/>
+    <path d="M15 30.5h9M37 30.5h9" stroke="#4c9a94" stroke-width="2.2"/>
+    <path d="M15 38h12M37 38h12" stroke="#1f2a33" stroke-width="3"/>
+    <path d="M15 43h9M37 43h9" stroke="#4c9a94" stroke-width="2.2"/>
+  </g>
+</svg>
