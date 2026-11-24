@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@400;500;600&amp;family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+html, body { margin: 0; padding: 0; background: #f6f3ec; }
+* { box-sizing: border-box; }
+a { color: #2c6f6b; text-decoration: none; border-bottom: 1px solid rgba(44,111,107,.3); }
+a:hover { color: #1f5450; border-bottom-color: rgba(44,111,107,.7); }
+input, textarea, button { font: inherit; color: inherit; }
+::selection { background: #cfe6e2; }
+@media print {
+  html, body { background: #fff; }
+  [data-print="hide"] { display: none !important; }
+  [data-print="page"] { border: none !important; border-radius: 0 !important; padding: 0 !important; max-width: none !important; }
+  [data-print="wrap"] { padding: 0 !important; display: block !important; }
+}
+</style>
+<script src="phm-data.js"></script>
+</helmet>
+<div style="min-height:100vh;background:#f6f3ec;font-family:'Instrument Sans',system-ui,sans-serif;color:#1f2a33;-webkit-font-smoothing:antialiased;">
+
+<header data-print="hide" style="position:sticky;top:0;z-index:40;background:rgba(250,248,244,.95);backdrop-filter:blur(10px);border-bottom:1px solid #e6e0d2;">
+<div style="max-width:1400px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+<button onClick="{{ toggleRail }}" title="{{ L.tools }}" style="{{ railBtnStyle }}">
+<span style="display:block;width:13px;height:1.5px;background:currentColor;margin:2px 0;"></span>
+<span style="display:block;width:13px;height:1.5px;background:currentColor;margin:2px 0;"></span>
+<span style="display:block;width:13px;height:1.5px;background:currentColor;margin:2px 0;"></span>
+</button>
+<div style="display:flex;align-items:baseline;gap:9px;min-width:0;">
+<span style="font-family:'Noto Serif Tamil',serif;font-size:17px;font-weight:500;">பிலேமோன்</span>
+<span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a9399;white-space:nowrap;">{{ deck }}</span>
+</div>
+<div style="flex:1 1 20px;"></div>
+<div style="position:relative;">
+<input value="{{ query }}" onChange="{{ onQuery }}" placeholder="{{ L.search }}" style="width:210px;max-width:44vw;padding:7px 11px;border:1px solid #ddd6c6;border-radius:8px;background:#fffdf8;font-size:13px;outline:none;">
+<div style="{{ resultsStyle }}">
+<sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
+<div onClick="{{ r.onClick }}" style="display:flex;gap:9px;align-items:baseline;padding:7px 11px;cursor:pointer;border-bottom:1px solid #f0ebdf;">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#2c6f6b;">{{ r.ref }}</span>
+<span style="font-family:'Vijaya','Noto Serif Tamil',serif;font-size:14px;">{{ r.ta }}</span>
+<span style="font-family:'Gentium Book Plus',serif;font-size:13px;color:#7a858b;">{{ r.gr }}</span>
+</div>
+</sc-for>
+<div style="{{ noResultStyle }}">{{ L.noResults }}</div>
+</div>
+</div>
+<button onClick="{{ onPrint }}" style="padding:7px 12px;border:1px solid #ddd6c6;border-radius:8px;background:#fffdf8;font-size:12.5px;color:#5f6e74;cursor:pointer;white-space:nowrap;">{{ L.print }}</button>
+<div style="display:flex;border:1px solid #ddd6c6;border-radius:8px;overflow:hidden;">
+<button onClick="{{ setEn }}" style="{{ enStyle }}">EN</button>
+<button onClick="{{ setTa }}" style="{{ taStyle }}">தமிழ்</button>
+</div>
+</div>
+<div style="max-width:1400px;margin:0 auto;padding:0 22px 10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+<span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-right:3px;">{{ L.layers }}</span>
+<sc-for list="{{ layerList }}" as="ly" hint-placeholder-count="6">
+<button onClick="{{ ly.onClick }}" style="{{ ly.chip }}">{{ ly.label }}</button>
+</sc-for>
+</div>
+</header>
+
+<div data-print="wrap" style="max-width: 1400px; margin: 0 auto; padding: 22px 22px 90px; display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-start">
+
+<aside data-print="hide" style="{{ railStyle }}">
+<div>
+<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:8px;">{{ L.passages }}</div>
+<sc-for list="{{ passages }}" as="p" hint-placeholder-count="4">
+<button onClick="{{ p.onClick }}" style="{{ p.style }}">
+<span style="display:block;font-size:13px;line-height:1.35;">{{ p.label }}</span>
+<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;opacity:.65;margin-top:2px;">{{ p.range }}</span>
+</button>
+</sc-for>
+</div>
+
+<div>
+<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:8px;">{{ L.map }}</div>
+<div style="display:flex;flex-direction:column;gap:2px;">
+<sc-for list="{{ mapRows }}" as="m" hint-placeholder-count="4">
+<div style="{{ m.style }}">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#7a858b;flex:0 0 34px;">{{ m.src }}</span>
+<span style="color:#c9cfd2;font-size:10px;">→</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#3a474e;flex:0 0 auto;">{{ m.tgt }}</span>
+<span style="font-size:10px;color:#17514d;margin-left:auto;">{{ m.tag }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div>
+<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:8px;">{{ L.marks }}</div>
+<sc-for list="{{ findingsList }}" as="f" hint-placeholder-count="5">
+<button onClick="{{ f.onClick }}" style="{{ f.style }}">
+<span style="display:block;font-family:'Gentium Book Plus',serif;font-size:13.5px;color:#3c5a58;">{{ f.src }}</span>
+<span style="display:flex;gap:6px;align-items:baseline;margin-top:3px;">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#a8afb3;">{{ f.ref }}</span>
+<span style="font-size:10.5px;color:#17514d;">{{ f.status }}</span>
+</span>
+</button>
+</sc-for>
+</div>
+
+<div style="padding-top:14px;border-top:1px solid #e6e0d2;display:flex;flex-direction:column;gap:6px;">
+<sc-for list="{{ statLines }}" as="s" hint-placeholder-count="6">
+<div style="display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:#8a9399;">
+<span>{{ s.label }}</span><span style="font-family:'IBM Plex Mono',monospace;color:#5f6e74;">{{ s.value }}</span>
+</div>
+</sc-for>
+</div>
+</aside>
+
+
+
+<main data-print="page" style="flex:4 1 460px;min-width:300px;background:#fffdf8;border:1px solid #ece5d6;border-radius:12px;padding:24px 24px 20px;">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid #f0ebdd;">
+<h1 style="margin:0;font-family:'Noto Serif Tamil',serif;font-size:18px;font-weight:500;">{{ passageTitle }}</h1>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9aa2a7;">{{ passageRange }}</span>
+<span style="flex:1 1 10px;"></span>
+<span style="font-size:11px;color:#b3b9bc;">{{ L.kbdHint }}</span>
+</div>
+
+<sc-for list="{{ verses }}" as="ver" hint-placeholder-count="4">
+<div style="padding:10px 0 12px;border-bottom:1px solid #f4efe3;">
+<div style="{{ ver.headingStyle }}">{{ ver.heading }}</div>
+<div style="display:flex;gap:12px;align-items:flex-start;">
+<div style="flex:0 0 24px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:3px;">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#a8afb3;">{{ ver.num }}</span>
+<span title="{{ ver.markTitle }}" style="{{ ver.markStyle }}">◆</span>
+<button data-print="hide" onClick="{{ ver.onFlag }}" title="{{ L.flag }}" style="{{ ver.flagStyle }}">⚑</button>
+</div>
+<div style="flex:1 1 0;min-width:0;">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;">
+<sc-for list="{{ ver.tokens }}" as="t" hint-placeholder-count="12">
+<span onClick="{{ t.onClick }}" onMouseEnter="{{ t.onHover }}" style="{{ t.wrap }}">
+<span style="{{ t.stStyle }}">{{ t.st }}</span><span style="color: #000000; font-family: Vijaya; font-size: 17px; font-weight: 900">{{ t.wp }}</span>
+<span style="color: #336F6B">{{ t.gr }}</span>
+<span style="{{ t.trStyle }}">{{ t.tr }}</span>
+<span style="color: #1A282F; font-size: 13px">{{ t.gl }}</span>
+
+<span style="{{ t.moStyle }}">{{ t.mo }}</span>
+<span onClick="{{ t.onCross }}" title="{{ t.crossTitle }}" style="{{ t.crossStyle }}">{{ t.crossLabel }}</span>
+</span>
+</sc-for>
+</div>
+
+<div style="{{ ver.esvStyle }}">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.12em;color:#b0a88f;margin-right:8px;">ESV</span>{{ ver.esv }}</div>
+
+<div style="{{ ver.noteStyle }}">
+<sc-for list="{{ ver.noteLines }}" as="n" hint-placeholder-count="0">
+<div style="display:flex;gap:8px;align-items:baseline;margin-top:5px;">
+<span style="{{ n.badge }}">{{ n.kind }}</span>
+<span style="font-size:12px;line-height:1.55;color:#6d777d;">{{ n.text }}</span>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ ver.inlineOpen }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:12px;border:1px solid #d7e6e2;background:#f4faf9;border-radius:10px;padding:14px 15px;">
+<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+<div style="min-width:0;">
+<div style="font-family:'Vijaya','Noto Serif Tamil',serif;font-size:19px;line-height:1.4;">{{ sel.ta }}</div>
+<div style="font-family:'Gentium Book Plus',serif;font-size:16px;color:#3c5a58;">{{ sel.gr }}</div>
+<div style="font-family:'Gentium Book Plus',serif;font-style:italic;font-size:12px;color:#8b9298;">{{ sel.tr }}</div>
+</div>
+<div style="flex:1 1 10px;"></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#2c6f6b;">{{ sel.st }}</span>
+<button onClick="{{ closeSel }}" style="border:none;background:transparent;color:#a8afb3;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;padding:0;">{{ L.close }}</button>
+</div>
+</div>
+<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2eeeb;display:flex;flex-direction:column;gap:8px;">
+<div>
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:3px;">{{ L.lexicon }}</div>
+<span style="font-family:'Gentium Book Plus',serif;font-size:15px;">{{ sel.lemma }}</span>
+<span style="font-size:12.5px;color:#46545b;"> · {{ sel.lemmaGloss }}</span>
+</div>
+<div>
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:3px;">{{ L.esvWord }}</div>
+<span style="font-size:13.5px;color:#2a3740;">{{ sel.esvWord }}</span>
+</div>
+<div>
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:3px;">{{ L.unit }}</div>
+<span style="font-size:13.5px;color:#2a3740;">{{ sel.unitLabel }}</span>
+<span style="{{ sel.statusStyle }}">{{ sel.statusLabel }}</span>
+<div style="font-size:12px;line-height:1.6;color:#6d777d;margin-top:5px;">{{ sel.unitNote }}</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ver.flagOpen }}" hint-placeholder-val="{{ false }}">
+<div data-print="hide" style="margin-top:12px;padding:13px;border:1px solid #d7e6e2;background:#f3faf8;border-radius:10px;">
+<div style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:#4d8a84;margin-bottom:8px;">{{ L.flagVerse }} {{ ver.num }}</div>
+<textarea value="{{ flagNote }}" onChange="{{ onFlagNote }}" placeholder="{{ L.flagPlaceholder }}" style="width:100%;min-height:58px;resize:vertical;padding:9px 11px;border:1px solid #cfe0dc;border-radius:8px;background:#fffdf8;font-size:13px;line-height:1.5;outline:none;"></textarea>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 11px;">
+<sc-for list="{{ reasons }}" as="rs" hint-placeholder-count="4">
+<button onClick="{{ rs.onClick }}" style="{{ rs.style }}">{{ rs.label }}</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;">
+<button onClick="{{ ver.onSaveFlag }}" style="padding:7px 15px;border:none;border-radius:7px;background:#2c6f6b;color:#fffdf8;font-size:12.5px;font-weight:500;cursor:pointer;">{{ L.save }}</button>
+<button onClick="{{ ver.onCancelFlag }}" style="padding:7px 13px;border:1px solid #d7ddd9;border-radius:7px;background:transparent;color:#6d777d;font-size:12.5px;cursor:pointer;">{{ L.cancel }}</button>
+</div>
+</div>
+</sc-if>
+
+<div style="{{ ver.savedFlagStyle }}">
+<span style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#4d8a84;">{{ ver.savedTag }}</span>
+<span style="font-size:12.5px;line-height:1.55;color:#46545b;">{{ ver.savedNote }}</span>
+<button data-print="hide" onClick="{{ ver.onClearFlag }}" style="border:none;background:transparent;color:#9aa2a7;font-size:11px;cursor:pointer;padding:0;">{{ L.remove }}</button>
+</div>
+</div>
+</div>
+</div>
+</sc-for>
+
+<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:11px;color:#b3b9bc;">
+<span>{{ sourceLine }}</span>
+<span>{{ licenceLine }}</span>
+</div>
+</main><section data-print="hide" style="{{ panelColStyle }}">
+<div style="background:#1f2a33;border-radius:12px;padding:13px 15px;color:#fffdf8;">
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#9dbdb9;margin-bottom:6px;">{{ L.hover }}</div>
+<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;">
+<span style="font-family:'Vijaya','Noto Serif Tamil',serif;font-size:16px;">{{ hover.ta }}</span>
+<span style="font-family:'Gentium Book Plus',serif;font-size:15px;color:#cfe6e2;">{{ hover.gr }}</span>
+</div>
+<div style="font-size:12.5px;color:#e0dccf;margin-top:3px;min-height:18px;">{{ hover.gl }}</div>
+</div>
+
+<div style="{{ emptyStyle }}">
+<div style="font-family:'Noto Serif Tamil',serif;font-size:15px;color:#5f6e74;line-height:1.7;">{{ L.emptyTitle }}</div>
+<div style="font-size:12.5px;color:#9aa2a7;line-height:1.65;margin-top:6px;">{{ L.emptyBody }}</div>
+</div>
+
+<div style="{{ panelStyle }}">
+<div style="padding:15px 17px 13px;border-bottom:1px solid #ece5d6;display:flex;align-items:flex-start;gap:12px;">
+<div style="min-width:0;">
+<div style="font-family:'Vijaya','Noto Serif Tamil',serif;font-size:20px;line-height:1.4;">{{ sel.ta }}</div>
+<div style="font-family:'Gentium Book Plus',serif;font-size:17px;color:#3c5a58;">{{ sel.gr }}</div>
+<div style="font-family:'Gentium Book Plus',serif;font-style:italic;font-size:12.5px;color:#8b9298;">{{ sel.tr }}</div>
+</div>
+<div style="flex:1 1 10px;"></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#2c6f6b;">{{ sel.st }}</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9aa2a7;">{{ sel.mo }}</span>
+<button onClick="{{ closeSel }}" style="border:none;background:transparent;color:#b3b9bc;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;padding:0;">{{ L.close }}</button>
+</div>
+</div>
+<div style="padding:13px 17px;border-bottom:1px solid #f2ecdf;">
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:6px;">{{ L.lexicon }}</div>
+<div style="font-family:'Gentium Book Plus',serif;font-size:16px;">{{ sel.lemma }}</div>
+<div style="font-size:12.5px;line-height:1.55;color:#46545b;margin-top:3px;">{{ sel.lemmaGloss }}</div>
+<div style="{{ sel.morphLongStyle }}">{{ sel.morphLong }}</div>
+</div>
+<div style="padding:13px 17px;border-bottom:1px solid #f2ecdf;">
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:6px;">{{ L.esvWord }}</div>
+<div style="font-size:14px;color:#2a3740;">{{ sel.esvWord }}</div>
+<div style="font-family:'Gentium Book Plus',serif;font-size:13px;line-height:1.6;color:#7a858b;margin-top:6px;">{{ sel.esvVerse }}</div>
+</div>
+<div style="padding:13px 17px;">
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:6px;">{{ L.unit }}</div>
+<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+<span style="font-size:14px;color:#2a3740;">{{ sel.unitLabel }}</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#a8afb3;">{{ sel.unitId }}</span>
+</div>
+<div style="margin-top:7px;"><span style="{{ sel.statusStyle }}">{{ sel.statusLabel }}</span></div>
+<div style="font-size:12.5px;line-height:1.6;color:#6d777d;margin-top:8px;">{{ sel.unitNote }}</div>
+</div>
+<div style="{{ sel.occStyle }}">
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8afb3;margin-bottom:8px;">{{ sel.occTitle }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;">
+<sc-for list="{{ sel.occ }}" as="o" hint-placeholder-count="0">
+<button onClick="{{ o.onClick }}" style="display:flex;align-items:baseline;gap:6px;padding:4px 9px;border:1px solid #dfe8e5;border-radius:999px;background:#fffdf8;cursor:pointer;">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#2c6f6b;">{{ o.ref }}</span>
+<span style="font-family:'Vijaya','Noto Serif Tamil',serif;font-size:14px;">{{ o.ta }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1280, &quot;height&quot;: 860}, &quot;startPassage&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;GREETING&quot;, &quot;THANKSGIVING&quot;, &quot;APPEAL&quot;, &quot;CLOSING&quot;], &quot;default&quot;: &quot;GREETING&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;startLang&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;en&quot;, &quot;ta&quot;], &quot;default&quot;: &quot;en&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;studyMarksOn&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;}, &quot;tamilReadingSize&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;min&quot;: 14, &quot;max&quot;: 22, &quot;step&quot;: 1, &quot;default&quot;: 16, &quot;unit&quot;: &quot;px&quot;, &quot;tsType&quot;: &quot;number&quot;}, &quot;greekLineSize&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;min&quot;: 12, &quot;max&quot;: 20, &quot;step&quot;: 0.5, &quot;default&quot;: 15.5, &quot;unit&quot;: &quot;px&quot;, &quot;tsType&quot;: &quot;number&quot;}}">
+const TA_READ = "'Vijaya','Noto Serif Tamil',serif";
+const H = { ta: 26, gr: 22, tr: 15, gl: 15, st: 13, mo: 12 };
+const LABELS = {
+  en: { search: "Search Tamil, Greek, Strong's", noResults: 'No matches', layers: 'Layers', translit: 'Transliteration',
+    gloss: 'English gloss', strong: "Strong's", morph: 'Morphology', esv: 'ESV verse', notes: 'Study marks',
+    flag: 'Flag this verse', flagVerse: 'Flag verse', flagPlaceholder: 'What should a reviewer look at here?',
+    save: 'Save flag', cancel: 'Cancel', remove: 'Remove', close: 'Close', lexicon: "Strong's entry",
+    esvWord: 'ESV rendering', unit: 'Semantic unit', occ: 'Also in Philemon', passages: 'Passages', marks: 'Study marks',
+    map: 'Passage map', hover: 'Under the cursor', deck: 'IRV Tamil · Textus Receptus 1894', tools: 'Study tools',
+    print: 'Print passage', kbdHint: '← → ↑ ↓ to move between words',
+    emptyTitle: 'Tap any Tamil word.', emptyBody: "Its Greek source, Strong's entry, ESV rendering and semantic unit appear here.",
+    reasons: { meaning: 'Meaning', wording: 'Wording', base: 'Base text', other: 'Other' },
+    swapped: 'swapped', moved: 'moved', split: 'split' },
+  ta: { search: 'தமிழ், கிரேக்கம், ஸ்ட்ராங்ஸ்', noResults: 'பொருத்தம் இல்லை', layers: 'அடுக்குகள்', translit: 'ஒலிபெயர்ப்பு',
+    gloss: 'ஆங்கில பொருள்', strong: 'ஸ்ட்ராங்ஸ்', morph: 'இலக்கண வடிவம்', esv: 'ESV வசனம்', notes: 'ஆய்வுக் குறிப்புகள்',
+    flag: 'இந்த வசனத்தைக் குறி', flagVerse: 'வசனக் குறிப்பு', flagPlaceholder: 'மறுபரிசீலனை செய்பவர் எதைப் பார்க்க வேண்டும்?',
+    save: 'சேமி', cancel: 'ரத்து', remove: 'நீக்கு', close: 'மூடு', lexicon: 'ஸ்ட்ராங்ஸ் விவரம்',
+    esvWord: 'ESV மொழிபெயர்ப்பு', unit: 'சொற்பொருள் அலகு', occ: 'பிலேமோனில் மற்ற இடங்கள்', passages: 'பகுதிகள்',
+    marks: 'ஆய்வுக் குறிப்புகள்', map: 'பகுதி வரைபடம்', hover: 'சுட்டிக்கு அடியில்', deck: 'IRV தமிழ் · டெக்ஸ்டஸ் ரெசெப்டஸ் 1894',
+    tools: 'ஆய்வுக் கருவிகள்', print: 'அச்சிடு', kbdHint: 'சொற்களுக்கு இடையே ← → ↑ ↓',
+    emptyTitle: 'எந்த தமிழ் சொல்லையும் தொடுங்கள்.', emptyBody: 'அதன் கிரேக்க மூலம், ஸ்ட்ராங்ஸ் விவரம், ESV மொழிபெயர்ப்பு, சொற்பொருள் அலகு இங்கே தோன்றும்.',
+    reasons: { meaning: 'பொருள்', wording: 'சொற்தொடர்', base: 'மூலபாடம்', other: 'மற்றவை' },
+    swapped: 'இடம் மாறியது', moved: 'நகர்ந்தது', split: 'பிரிந்தது' }
+};
+const PASSAGE_LABELS = {
+  GREETING: { en: 'Greeting', ta: 'வாழ்த்துரை' }, THANKSGIVING: { en: 'Thanksgiving', ta: 'நன்றி கூறுதல்' },
+  APPEAL: { en: 'Appeal for Onesimus', ta: 'ஒநேசிமுவுக்காக மன்றாடுதல்' }, CLOSING: { en: 'Closing words', ta: 'இறுதி வார்த்தைகள்' }
+};
+const STATUS = {
+  PRESERVED: { en: 'Meaning preserved', ta: 'பொருள் காக்கப்பட்டது', c: '#4d8a84', bg: '#e7f3f1' },
+  PRESERVED_WITH_RESTRUCTURING: { en: 'Preserved, restructured', ta: 'மறுசீரமைப்புடன் காக்கப்பட்டது', c: '#4d8a84', bg: '#e7f3f1' },
+  MEANING_SHIFT: { en: 'Meaning shift', ta: 'பொருள் மாற்றம்', c: '#17514d', bg: '#e4efed' },
+  PARTIAL: { en: 'Partly rendered', ta: 'பகுதியாக மொழிபெயர்க்கப்பட்டது', c: '#17514d', bg: '#e4efed' },
+  UNDERTRANSLATED: { en: 'Undertranslated', ta: 'குறைவாக மொழிபெயர்க்கப்பட்டது', c: '#17514d', bg: '#e4efed' }
+};
+const MORPH_PART = { N: 'noun', V: 'verb', A: 'adjective', T: 'article', P: 'pronoun', R: 'relative pronoun',
+  D: 'demonstrative', CONJ: 'conjunction', PREP: 'preposition', ADV: 'adverb', PRT: 'particle', I: 'interjection' };
+const MORPH_BITS = { NSM: 'nominative singular masculine', GSM: 'genitive singular masculine', DSM: 'dative singular masculine',
+  ASM: 'accusative singular masculine', NSF: 'nominative singular feminine', GSF: 'genitive singular feminine',
+  DSF: 'dative singular feminine', ASF: 'accusative singular feminine', NSN: 'nominative singular neuter',
+  GSN: 'genitive singular neuter', DSN: 'dative singular neuter', ASN: 'accusative singular neuter',
+  NPM: 'nominative plural masculine', GPM: 'genitive plural masculine', DPM: 'dative plural masculine',
+  APM: 'accusative plural masculine', NPN: 'nominative plural neuter', GPF: 'genitive plural feminine',
+  DPF: 'dative plural feminine', APF: 'accusative plural feminine', NPF: 'nominative plural feminine', VSM: 'vocative singular masculine' };
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { lang: props.startLang || 'en', passage: props.startPassage || 'GREETING', sel: null, hover: null,
+      flagOpen: null, railOpen: false, flagNote: '', flagReason: 'meaning', flags: {}, query: '', narrow: false,
+      layers: { translit: true, gloss: true, strong: true, morph: true, esv: false, notes: !!props.studyMarksOn } };
+  }
+
+  componentDidMount() {
+    try { const f = localStorage.getItem('phm-verse-flags'); if (f) this.setState({ flags: JSON.parse(f) }); } catch (e) {}
+    this._resize = () => this.setState({ narrow: window.innerWidth < 900 });
+    this._resize();
+    window.addEventListener('resize', this._resize);
+    this._key = (e) => this.onKey(e);
+    window.addEventListener('keydown', this._key);
+    this.waitForData();
+  }
+  componentWillUnmount() {
+    clearTimeout(this._t);
+    window.removeEventListener('resize', this._resize);
+    window.removeEventListener('keydown', this._key);
+  }
+  waitForData() { if (window.PHM) { this.forceUpdate(); return; } this._t = setTimeout(() => this.waitForData(), 70); }
+
+  D() { return window.PHM; }
+  range() {
+    const sc = this.D().passageScopes[this.state.passage];
+    return [+sc.start.split(':')[1], +sc.end.split(':')[1]];
+  }
+  onKey(e) {
+    if (!this.D()) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.key === 'Escape') { this.setState({ sel: null }); return; }
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(e.key) === -1) return;
+    const P = this.D(); const [a, b] = this.range();
+    const len = (v) => ((P.verses[v] || { toks: [] }).toks.length);
+    let v, i;
+    if (!this.state.sel) { v = a; i = 1; } else {
+      const p = this.state.sel.split('.'); v = +p[0]; i = +p[1];
+      if (v < a || v > b) { v = a; i = 1; }
+      else if (e.key === 'ArrowRight') { i += 1; if (i > len(v)) { v = v < b ? v + 1 : a; i = 1; } }
+      else if (e.key === 'ArrowLeft') { i -= 1; if (i < 1) { v = v > a ? v - 1 : b; i = len(v); } }
+      else if (e.key === 'ArrowDown') { v = v < b ? v + 1 : a; i = Math.min(i, len(v)); }
+      else if (e.key === 'ArrowUp') { v = v > a ? v - 1 : b; i = Math.min(i, len(v)); }
+    }
+    e.preventDefault();
+    this.setState({ sel: v + '.' + i });
+  }
+  gw(ref) {
+    const m = /Phm\.1\.(\d+)#(\d+)/.exec(ref || ''); if (!m) return null;
+    const list = this.D().greek[m[1]] || []; return list.find(g => g.inst === m[2]) || null;
+  }
+  morphLong(code) {
+    if (!code) return '';
+    return code.split(',').map(c => {
+      const parts = c.split('-'); const head = MORPH_PART[parts[0]] || parts[0];
+      const rest = parts.slice(1).map(p => MORPH_BITS[p] || p).join(', ');
+      return rest ? head + ' — ' + rest : head;
+    }).join(' · ');
+  }
+  toggleLayer(k) { this.setState(s => ({ layers: Object.assign({}, s.layers, { [k]: !s.layers[k] }) })); }
+  passageOf(v) {
+    const sc = this.D().passageScopes;
+    for (const k of Object.keys(sc)) {
+      const a = +sc[k].start.split(':')[1], b = +sc[k].end.split(':')[1];
+      if (v >= a && v <= b) return k;
+    }
+    return 'GREETING';
+  }
+  select(v, i) { this.setState({ passage: this.passageOf(v), sel: v + '.' + i, query: '' }); }
+  saveFlags(flags) {
+    this.setState({ flags: flags, flagOpen: null, flagNote: '' });
+    try { localStorage.setItem('phm-verse-flags', JSON.stringify(flags)); } catch (e) {}
+  }
+  tokenData(v, i) {
+    const P = this.D(); const t = (P.verses[v] || { toks: [] }).toks[i - 1]; if (!t) return null;
+    const gws = (t.srcs || []).map(r => this.gw(r)).filter(Boolean);
+    const unitId = P.unitByToken[v + '.' + i] || null;
+    const unit = unitId ? P.units.find(u => u.id === unitId) : null;
+    const support = P.supportByToken[v + '.' + i] || null;
+    let crossTo = null;
+    if (t.cross && t.srcs && t.srcs.length) { const m = /Phm\.1\.(\d+)#/.exec(t.srcs[0]); if (m && +m[1] !== v) crossTo = +m[1]; }
+    return { t: t, gws: gws, unit: unit, support: support, crossTo: crossTo };
+  }
+  firstTokenOfUnit(unitId) {
+    const P = this.D();
+    for (const k of Object.keys(P.unitByToken)) if (P.unitByToken[k] === unitId) return k;
+    return null;
+  }
+
+  renderVals() {
+    const P = this.D(); const st = this.state; const lang = st.lang; const L = LABELS[lang];
+    const base = {
+      L: L, deck: L.deck, query: st.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      setEn: () => this.setState({ lang: 'en' }), setTa: () => this.setState({ lang: 'ta' }),
+      closeSel: () => this.setState({ sel: null }),
+      toggleRail: () => this.setState(s => ({ railOpen: !s.railOpen })),
+      onPrint: () => { this.setState(s => ({ layers: Object.assign({}, s.layers, { notes: true }) })); setTimeout(() => window.print(), 260); },
+      enStyle: this.langBtn(lang === 'en'), taStyle: this.langBtn(lang === 'ta'),
+      railBtnStyle: 'display:flex;flex-direction:column;justify-content:center;align-items:center;width:32px;height:32px;border:1px solid ' +
+        (st.railOpen ? '#2c6f6b' : '#ddd6c6') + ';border-radius:8px;background:' + (st.railOpen ? '#e7f3f1' : '#fffdf8') +
+        ';color:' + (st.railOpen ? '#1f5450' : '#8a9399') + ';cursor:pointer;padding:0;',
+      railStyle: st.railOpen
+        ? 'flex:1 1 190px;max-width:250px;min-width:180px;position:sticky;top:112px;display:flex;flex-direction:column;gap:18px;'
+        : 'display:none;',
+      panelColStyle: st.narrow ? 'display:none;' : 'flex:2 1 290px;min-width:270px;position:sticky;top:112px;display:flex;flex-direction:column;gap:13px;',
+      verses: [], passages: [], results: [], layerList: [], reasons: [], findingsList: [], statLines: [], mapRows: [],
+      resultsStyle: 'display:none;', noResultStyle: 'display:none;',
+      hover: { ta: '—', gr: '', gl: '' }, sel: {}, panelStyle: 'display:none;',
+      emptyStyle: 'background:#fffdf8;border:1px solid #ece5d6;border-radius:12px;padding:18px;',
+      flagNote: st.flagNote, onFlagNote: e => this.setState({ flagNote: e.target.value }),
+      passageTitle: '', passageRange: '', sourceLine: '', licenceLine: ''
+    };
+    if (!P) return base;
+
+    const scopes = P.passageScopes;
+    base.passages = Object.keys(scopes).map(k => {
+      const on = k === st.passage;
+      return { label: PASSAGE_LABELS[k][lang], range: scopes[k].start.replace('PHM ', '') + '–' + scopes[k].end.split(':')[1],
+        onClick: () => this.setState({ passage: k, sel: null }),
+        style: 'display:block;width:100%;text-align:left;padding:8px 11px;margin-bottom:3px;border:none;border-radius:8px;cursor:pointer;' +
+          'background:' + (on ? '#e7f3f1' : 'transparent') + ';color:' + (on ? '#1f5450' : '#7a858b') + ';font-weight:' + (on ? '600' : '400') + ';' };
+    });
+    base.passageTitle = PASSAGE_LABELS[st.passage][lang];
+    base.passageRange = scopes[st.passage].start.replace('PHM ', '') + '–' + scopes[st.passage].end.split(':')[1];
+    base.sourceLine = P.book.sourceEdition + ' · ' + P.book.target;
+    base.licenceLine = P.book.esvNote;
+
+    base.layerList = [['translit', L.translit], ['gloss', L.gloss], ['strong', L.strong], ['morph', L.morph], ['esv', L.esv], ['notes', L.notes]]
+      .map(([k, label]) => ({ label: label, onClick: () => this.toggleLayer(k),
+        chip: 'padding:5px 11px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid ' + (st.layers[k] ? '#2c6f6b' : '#ddd6c6') +
+          ';background:' + (st.layers[k] ? '#e7f3f1' : '#fffdf8') + ';color:' + (st.layers[k] ? '#1f5450' : '#8a9399') + ';' }));
+
+    const [ra, rb] = this.range();
+    const pm = P.passageMap || {};
+    base.mapRows = [];
+    for (let v = ra; v <= rb; v++) {
+      const entry = pm['PHM 1:' + v]; if (!entry) continue;
+      const targets = Object.keys(entry).filter(k => k.indexOf('PHM') === 0).map(k => +k.split(':')[1].split(' ')[0]);
+      const uniq = []; targets.forEach(t => { if (uniq.indexOf(t) === -1) uniq.push(t); });
+      uniq.sort((x, y) => x - y);
+      const moved = uniq.length > 1 || (uniq.length === 1 && uniq[0] !== v);
+      const notLocated = !!entry['(not located)'];
+      base.mapRows.push({
+        src: '1:' + v, tgt: uniq.length ? uniq.map(t => '1:' + t).join(', ') : '—',
+        tag: uniq.length > 1 ? L.split : (moved ? L.swapped : (notLocated ? '·' : '')),
+        style: 'display:flex;align-items:baseline;gap:7px;padding:4px 7px;border-radius:6px;background:' + (moved ? '#f2f7f5' : 'transparent') + ';'
+      });
+    }
+
+    const findingUnits = {}; (P.findings || []).forEach(f => { findingUnits[f.unit] = f; });
+    base.findingsList = (P.findings || []).map(f => {
+      const s = STATUS[f.status] || { en: f.status, ta: f.status };
+      const key = this.firstTokenOfUnit(f.unit);
+      const on = key && st.sel === key;
+      return { src: f.source, ref: f.ref.replace('PHM ', ''), status: s[lang],
+        onClick: () => { if (key) { const p = key.split('.'); this.select(+p[0], +p[1]); } },
+        style: 'display:block;width:100%;text-align:left;padding:8px 10px;margin-bottom:3px;border:none;border-left:2px solid ' +
+          (on ? '#17514d' : '#e3ece9') + ';border-radius:0 8px 8px 0;cursor:pointer;background:' + (on ? '#eef5f3' : 'transparent') + ';' };
+    });
+
+    if (st.query && st.query.trim().length > 0) {
+      const q = st.query.trim().toLowerCase(); const out = [];
+      for (let v = 1; v <= 25 && out.length < 9; v++) {
+        const toks = (P.verses[v] || { toks: [] }).toks;
+        for (let i = 1; i <= toks.length && out.length < 9; i++) {
+          const d = this.tokenData(v, i); if (!d) continue;
+          const hay = [d.t.w, (d.t.strongs || []).join(' '), d.gws.map(g => g.word + ' ' + g.translit + ' ' + g.gloss).join(' ')].join(' ').toLowerCase();
+          if (hay.indexOf(q) === -1) continue;
+          out.push({ ref: '1:' + v, ta: d.t.w, gr: d.gws.map(g => g.word).join(' ') || '—', onClick: () => this.select(v, i) });
+        }
+      }
+      base.results = out;
+      base.resultsStyle = 'position:absolute;top:38px;right:0;z-index:50;width:330px;max-width:80vw;max-height:320px;overflow:auto;background:#fffdf8;border:1px solid #e0d9c9;border-radius:10px;box-shadow:0 14px 34px -18px rgba(31,42,51,.35);';
+      if (!out.length) base.noResultStyle = 'padding:10px 12px;font-size:12.5px;color:#9aa2a7;';
+    }
+
+    const selD = st.sel ? (() => { const p = st.sel.split('.'); return { v: +p[0], i: +p[1], d: this.tokenData(+p[0], +p[1]) }; })() : null;
+    const selUnitId = selD && selD.d && selD.d.unit ? selD.d.unit.id : null;
+    const selStrongs = selD && selD.d ? (selD.d.t.strongs || []) : [];
+    const taSize = this.props.tamilReadingSize || 16;
+    const grSize = this.props.greekLineSize || 15.5;
+    const taH = Math.round(taSize * 1.6), grH = Math.round(grSize * 1.42);
+    const line = (h, css, on) => on ? 'height:' + h + 'px;line-height:' + h + 'px;white-space:nowrap;' + css : 'display:none;';
+
+    const list = [];
+    for (let v = ra; v <= rb; v++) {
+      const vd = P.verses[v]; if (!vd) continue;
+      const tokens = vd.toks.map((t, k) => {
+        const i = k + 1; const d = this.tokenData(v, i);
+        const selected = st.sel === v + '.' + i;
+        const related = !selected && selUnitId && d.unit && d.unit.id === selUnitId;
+        const isFinding = d.unit && findingUnits[d.unit.id];
+        const grWords = d.gws.map(g => g.word).join(' ');
+        const bg = selected ? '#d6eae6' : related ? '#edf6f4' : 'transparent';
+        return {
+          wp: t.w + (t.punct || ''),
+          gr: grWords || (t.add ? '—' : ''),
+          tr: d.gws.map(g => g.translit).join(' · '),
+          gl: d.gws.map(g => g.gloss).filter(Boolean).join(' · ') || (t.add ? '+ ' + t.add : ''),
+          st: (t.strongs || []).join(' '), mo: (t.morphs || []).join(' '),
+          wrap: 'display:inline-flex;flex-direction:column;align-items:flex-start;text-align:left;margin:0 4px 4px 0;padding:3px 6px 4px;border-radius:7px;cursor:pointer;background:' + bg + ';transition:background .16s ease;',
+          taStyle: line(taH, 'font-family:' + TA_READ + ';font-size:' + taSize + 'px;color:' + (selected ? '#8a6a24' : '#1f2a33') + ';' +
+            (isFinding && st.layers.notes ? 'text-decoration:underline dotted #17514d;text-decoration-thickness:1.5px;text-underline-offset:4px;' : ''), true),
+          grStyle: line(grH, "font-family:'Gentium Book Plus',serif;font-size:" + grSize + "px;color:" + (selected ? '#8a6a24' : '#4c6360') + ';', true),
+          trStyle: line(H.tr, "font-family:'Gentium Book Plus',serif;font-style:italic;font-size:11.5px;color:#5f6e74;", st.layers.translit),
+          glStyle: line(H.gl, 'font-size:11.5px;color:#4f5c63;', st.layers.gloss),
+          stStyle: line(H.st, "font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#26615d;", st.layers.strong),
+          moStyle: line(H.mo, "font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6d777d;", st.layers.morph),
+          crossLabel: d.crossTo ? '↗ ' + d.crossTo : '',
+          crossTitle: d.crossTo ? 'Greek of verse ' + d.crossTo : '',
+          crossStyle: d.crossTo ? "margin-top:2px;padding:1px 5px;border-radius:999px;background:#eef2f0;color:#17514d;font-size:9px;font-family:'IBM Plex Mono',monospace;cursor:pointer;" : 'display:none;',
+          onCross: d.crossTo ? (e) => { e.stopPropagation(); this.setState({ passage: this.passageOf(d.crossTo), sel: null }); } : null,
+          onClick: () => this.setState({ sel: selected ? null : v + '.' + i }),
+          onHover: () => this.setState({ hover: { ta: t.w, gr: grWords || '—', gl: d.gws.map(g => g.gloss).filter(Boolean).join(' · ') || (t.add ? 'Tamil addition · ' + t.add : '') } })
+        };
+      });
+
+      const noteLines = [];
+      if (st.layers.notes) {
+        (P.omissions[v] || []).forEach(o => noteLines.push({ kind: 'GREEK', text: o.word + (o.gloss ? ' “' + o.gloss + '”' : '') + ' — not rendered in Tamil',
+          badge: "font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:#17514d;background:#e4efed;padding:2px 6px;border-radius:4px;flex:0 0 auto;" }));
+        (P.findings || []).filter(f => (f.target || []).indexOf('PHM 1:' + v) >= 0 || f.ref === 'PHM 1:' + v).forEach(f => {
+          const s = STATUS[f.status] || { en: f.status, ta: f.status };
+          noteLines.push({ kind: s[lang].toUpperCase(), text: f.note,
+            badge: "font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:#17514d;background:#e4efed;padding:2px 6px;border-radius:4px;flex:0 0 auto;" });
+        });
+        (P.notes[v] || []).forEach(n => noteLines.push({ kind: 'NOTE', text: n,
+          badge: "font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:#6d777d;background:#efece2;padding:2px 6px;border-radius:4px;flex:0 0 auto;" }));
+      }
+      const hasFinding = noteLines.some(n => n.kind !== 'NOTE');
+      const flag = st.flags['1:' + v];
+
+      list.push({
+        num: v, heading: P.headings[v] || '',
+        headingStyle: P.headings[v] ? "font-family:'Noto Serif Tamil',serif;font-size:14px;color:#5f6e74;margin:4px 0 12px 36px;" : 'display:none;',
+        tokens: tokens,
+        esv: P.esv[v], esvStyle: st.layers.esv ? "margin-top:8px;font-family:'Gentium Book Plus',serif;font-size:14px;line-height:1.6;color:#6d777d;" : 'display:none;',
+        noteLines: noteLines, noteStyle: noteLines.length ? 'margin-top:10px;padding-top:9px;border-top:1px dashed #ece5d6;' : 'display:none;',
+        markStyle: hasFinding && st.layers.notes ? 'color:#17514d;font-size:8px;' : 'display:none;',
+        markTitle: hasFinding ? 'Study mark on this verse' : '',
+        flagStyle: 'border:none;background:transparent;padding:0;cursor:pointer;font-size:11.5px;color:' + (flag ? '#2c6f6b' : '#cdd2cf') + ';',
+        onFlag: () => this.setState(s => ({ flagOpen: s.flagOpen === v ? null : v, flagNote: (s.flags['1:' + v] || {}).note || '' })),
+        flagOpen: st.flagOpen === v,
+        onSaveFlag: () => { const f = Object.assign({}, st.flags); if (st.flagNote.trim()) f['1:' + v] = { note: st.flagNote.trim(), reason: st.flagReason }; else delete f['1:' + v]; this.saveFlags(f); },
+        onCancelFlag: () => this.setState({ flagOpen: null, flagNote: '' }),
+        onClearFlag: () => { const f = Object.assign({}, st.flags); delete f['1:' + v]; this.saveFlags(f); },
+        savedFlagStyle: flag && st.flagOpen !== v ? 'margin-top:10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:9px 12px;background:#f3faf8;border-left:2px solid #2c6f6b;border-radius:0 8px 8px 0;' : 'display:none;',
+        savedTag: flag ? L.reasons[flag.reason] : '', savedNote: flag ? flag.note : '',
+        inlineOpen: !!(st.narrow && selD && selD.v === v)
+      });
+    }
+    base.verses = list;
+
+    base.reasons = ['meaning', 'wording', 'base', 'other'].map(k => ({
+      label: L.reasons[k], onClick: () => this.setState({ flagReason: k }),
+      style: 'padding:5px 11px;border-radius:999px;font-size:12px;cursor:pointer;border:1px solid ' + (st.flagReason === k ? '#2c6f6b' : '#d7ddd9') +
+        ';background:' + (st.flagReason === k ? '#e2f1ee' : 'transparent') + ';color:' + (st.flagReason === k ? '#1f5450' : '#6d777d') + ';'
+    }));
+
+    if (st.hover) base.hover = st.hover;
+
+    const s = P.stats;
+    base.statLines = [
+      { label: 'Semantic units', value: s.units },
+      { label: 'Meaning preserved', value: s.stage7.PRESERVED + s.stage7.PRESERVED_WITH_RESTRUCTURING },
+      { label: 'Flagged for review', value: s.stage7.MEANING_SHIFT + s.stage7.PARTIAL + s.stage7.UNDERTRANSLATED },
+      { label: 'Possibly missing', value: s.coverage.POSSIBLY_MISSING },
+      { label: 'Cross-verse units', value: s.properties.CROSS_VERSE },
+      { label: 'Unsupported Tamil', value: 0 }
+    ];
+
+    if (selD && selD.d) {
+      const d = selD.d; const u = d.unit; const f = u ? findingUnits[u.id] : null;
+      const status = u && u.status ? STATUS[u.status] : null;
+      const occ = [];
+      for (let v = 1; v <= 25 && occ.length < 16; v++) {
+        const toks = (P.verses[v] || { toks: [] }).toks;
+        toks.forEach((t, k) => {
+          if (occ.length >= 16) return;
+          if (v === selD.v && k + 1 === selD.i) return;
+          if ((t.strongs || []).some(x => selStrongs.indexOf(x) >= 0)) occ.push({ ref: '1:' + v, ta: t.w, onClick: () => this.select(v, k + 1) });
+        });
+      }
+      if (!st.narrow) {
+        base.emptyStyle = 'display:none;';
+        base.panelStyle = 'background:#fffdf8;border:1px solid #ece5d6;border-radius:12px;overflow:hidden;max-height:calc(100vh - 220px);overflow-y:auto;';
+      }
+      base.sel = {
+        ta: d.t.w + (d.t.punct || ''), gr: d.gws.map(g => g.word).join(' ') || '—',
+        tr: d.gws.map(g => g.translit).join(' · '),
+        st: (d.t.strongs || []).join(' ') || (d.t.add ? 'Tamil addition' : ''),
+        mo: (d.t.morphs || []).join(' '),
+        lemma: d.gws.map(g => g.lemma).join(' · ') || '—',
+        lemmaGloss: d.gws.map(g => g.lemmaGloss || g.gloss).filter(Boolean).join(' · ') ||
+          (d.support ? d.support.reason : 'No Greek word behind this Tamil word'),
+        morphLong: this.morphLong((d.t.morphs || []).join(',')),
+        morphLongStyle: (d.t.morphs || []).length ? 'font-size:11.5px;line-height:1.55;color:#8b9298;margin-top:6px;' : 'display:none;',
+        esvWord: (d.t.srcs || []).map(r => P.esvByRef[r]).filter(Boolean).join(' ') || '—',
+        esvVerse: P.esv[selD.v],
+        unitId: u ? u.id : '', unitLabel: u ? u.label : (d.support ? this.supportLabel(d.support.status, lang) : '—'),
+        statusLabel: status ? status[lang] : (d.support ? d.support.status.replace(/_/g, ' ').toLowerCase() : ''),
+        statusStyle: 'display:inline-block;margin-left:8px;padding:3px 9px;border-radius:999px;font-size:11px;background:' +
+          (status ? status.bg : '#eef2ea') + ';color:' + (status ? status.c : '#6d777d') + ';',
+        unitNote: f ? f.note : (u && u.note ? u.note : (d.support ? d.support.reason : '')),
+        occ: occ, occTitle: L.occ + (selStrongs.length ? ' · ' + selStrongs.join(' ') : ''),
+        occStyle: occ.length ? 'padding:13px 17px;border-top:1px solid #f2ecdf;' : 'display:none;'
+      };
+    }
+    return base;
+  }
+
+  supportLabel(status, lang) {
+    const M = { GRAMMATICALLY_REQUIRED: { en: 'Required by Tamil grammar', ta: 'தமிழ் இலக்கணத்திற்குத் தேவை' },
+      EXPLICITATION_SUPPORTED: { en: 'Explicitation', ta: 'வெளிப்படையாக்கம்' },
+      CONTEXT_SUPPORTED: { en: 'Supported by context', ta: 'சூழலால் ஆதரிக்கப்பட்டது' },
+      SOURCE_SUPPORTED: { en: 'Supported by another base text', ta: 'வேறு மூலபாடத்தால் ஆதரிக்கப்பட்டது' } };
+    return (M[status] || { en: status, ta: status })[lang];
+  }
+  langBtn(on) {
+    return 'padding:7px 11px;border:none;cursor:pointer;font-size:12px;background:' + (on ? '#2c6f6b' : '#fffdf8') + ';color:' + (on ? '#fffdf8' : '#8a9399') + ';';
+  }
+}
+</script>
+</body>
+</html>
