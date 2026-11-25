@@ -1,7 +1,7 @@
 # Developer hand-off — Interlinear Bible PWA
 
 **Repository:** https://github.com/selvabenz/interlinear-bible
-**Live site:** https://selvabenz.github.io/interlinear-bible/
+**Live site:** https://gospelark.in/
 **Project board:** https://github.com/users/selvabenz/projects/5
 **Status (2026-11-25):** app, content pipeline, importer, PWA and CI/CD complete. Two books
 published (Philemon, 1 John), each in two source texts. Word lists for all 66 books are bundled,
@@ -59,7 +59,7 @@ Import screen ─▶ import.worker.ts (pipeline) ─▶ local preview (IndexedDB
 | UI | `src/routes/*.svelte`, `src/lib/components/*.svelte` | Svelte 5 (runes). Every page: `AppBar` (menu + title + search, slides away on scroll down below 900 px and sets `--bar-offset` for sticky headings) and `AppMenu`. All overlays use `Sheet` (modal `<dialog>` in the top layer: drawer, bottom sheet on phones; closes on its button, Escape, backdrop, route change). Preferences: `SettingsPanel` (App / Reading / Study; in the menu and on `#/settings`). `SearchBox` + `data/find.ts`: words, book names and references. `Reader.svelte` renders Reading and Study views; sections with sticky headings; study tools beside the text ≥ 1200 px, else in a sheet. Theme tokens in `app.css` (`data-theme` light/dark/sepia, set before first paint in `index.html`). |
 | State | `src/lib/stores/*.svelte.ts` | Preferences (incl. preferred source per testament, GitHub repo/token) and flags in localStorage; router on `location.hash`. |
 | PWA | `vite.config.ts` (vite-plugin-pwa), `UpdatePrompt.svelte` | Shell precached (~68 KB gzip JS + 13 KB import worker); `data/` runtime-cached (catalog network-first, books and library stale-while-revalidate, fetched on demand). |
-| CI/CD | `.github/workflows/ci.yml`, `deploy.yml` | PR: strict content check, unit, type check, build, Playwright. `main`: strict content check, unit, build with `BASE_PATH=/interlinear-bible/`, deploy to Pages. |
+| CI/CD | `.github/workflows/ci.yml`, `deploy.yml` | PR: strict content check, unit, type check, build, Playwright. `main`: strict content check, unit, build with `BASE_PATH=/`, deploy to Pages. |
 
 Data shapes: [DATA_FORMAT.md](DATA_FORMAT.md). Content workflow: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 Alignment format: [USFM_SCHEMA.md](USFM_SCHEMA.md).
@@ -107,7 +107,7 @@ npm run sources:survey -- --stepbible <dir> --tc <dir>   # dry run: match rates 
 npm run icons            # re-render PNG icons after changing public/favicon.svg
 ```
 
-Base path: local builds use `/`; Pages builds set `BASE_PATH=/interlinear-bible/`.
+Base path: `/` everywhere — the site is served at the root of the custom domain gospelark.in (the root `CNAME` file holds the domain).
 Data folders used so far (owner's machine): STEPBible at `D:\Claude Lab\STEPBible-Data-master`,
 translationCore resources at `D:\Claude Lab\translationCore\resources` (or set `STEPBIBLE_DIR` /
 `TC_RESOURCES`).

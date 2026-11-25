@@ -5,7 +5,8 @@ import { readFileSync } from 'node:fs';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
-// GitHub Pages serves the site from /<repo>/; CI sets BASE_PATH=/interlinear-bible/.
+// The site is served at the root of the custom domain https://gospelark.in/, so the base is '/'.
+// Set BASE_PATH only to serve from a sub-path (e.g. /interlinear-bible/ on <user>.github.io).
 const base = process.env.BASE_PATH || '/';
 
 export default defineConfig({

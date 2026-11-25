@@ -7,7 +7,7 @@ Greek or Hebrew it renders, with Strong's number, morphology, transliteration, E
 and — where a semantic alignment exists — study marks on meaning shifts, omissions and
 cross-verse renderings.
 
-**Live:** https://selvabenz.github.io/interlinear-bible/
+**Live:** https://gospelark.in/
 
 The app is data-driven: it has no book-specific code. Books are added by dropping aligned
 USFM and source-token files into `content/` and pushing, or previewed in the browser with the

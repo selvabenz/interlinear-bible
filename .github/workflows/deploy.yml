@@ -33,7 +33,8 @@ jobs:
       - name: Build data and app
         run: npm run build
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+          # Served from the custom domain https://gospelark.in/ at the root path.
+          BASE_PATH: /
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
