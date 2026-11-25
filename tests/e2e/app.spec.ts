@@ -158,17 +158,20 @@ test('a Bridge (UGNT-aligned) book is readable in both source texts', async ({ p
   await expect(page.locator('[data-key="s:1:1#1"]')).toContainText('ὃ');
 });
 
-test('import needs only the aligned USFM, even for a book that is not published', async ({ page }) => {
-  test.skip(isPhone(page), 'file picking is covered on desktop');
-  // a translationCore-style file for 3 John 1:1, made from the bundled UGNT word list
+/** A translationCore-style aligned file for 3 John 1:1 (an unpublished book), from the bundled UGNT list. */
+function uwUsfm3JN(): string {
   const lib = JSON.parse(readFileSync(join(ROOT, 'content/library/grc-ugnt/3JN.json'), 'utf8')) as { v: Record<string, [number, string, string, string, string, string][]> };
-  const words = lib.v['1:1'];
-  const usfm = [
+  return [
     '\\id 3JN test', '\\h 3 யோவான்', '\\c 1',
-    '\\v 1 ' + words.map(([, w, , , st], k) =>
+    '\\v 1 ' + lib.v['1:1'].map(([, w, , , st], k) =>
       `\\zaln-s |x-strong="${st}0" x-morph="Gr,N,,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="${w}"\\*\\w சொல்${k + 1}|x-occurrence="1" x-occurrences="1"\\w*\\zaln-e\\*`
     ).join(' ')
   ].join('\n');
+}
+
+test('import needs only the aligned USFM, even for a book that is not published', async ({ page }) => {
+  test.skip(isPhone(page), 'file picking is covered on desktop');
+  const usfm = uwUsfm3JN();
   await page.goto('/#/import');
   await page.locator('input[type=file]').setInputFiles({ name: '3jn-aligned.usfm', mimeType: 'text/plain', buffer: Buffer.from(usfm) });
   await page.getByRole('button', { name: 'Check files' }).click();
@@ -177,4 +180,52 @@ test('import needs only the aligned USFM, even for a book that is not published'
   await expect(cards.filter({ hasText: 'ta-irv · UGNT' })).toContainText('as aligned');
   await expect(cards.filter({ hasText: 'ta-irv · Textus Receptus 1894' })).toContainText('remapped from UGNT');
   await expect(page.getByText('Missing files')).toHaveCount(0);
+});
+
+test('a maintainer publishes an imported book as a GitHub pull request', async ({ page }) => {
+  test.skip(isPhone(page), 'file picking is covered on desktop');
+  // GitHub API, mocked: record what the app sends
+  const sent: { method: string; path: string; body: Record<string, unknown> | null }[] = [];
+  const oldMap = JSON.stringify({ overrides: { '1:1#2': null } });
+  await page.route('https://api.github.com/**', async (route) => {
+    const req = route.request();
+    const path = new URL(req.url()).pathname;
+    const body = req.postData() ? (JSON.parse(req.postData()!) as Record<string, unknown>) : null;
+    sent.push({ method: req.method(), path, body });
+    const json = (status: number, data: unknown) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+    if (path === '/repos/selvabenz/interlinear-bible') return json(200, { default_branch: 'main', permissions: { push: true } });
+    if (path === '/user') return json(200, { login: 'maintainer' });
+    if (path.endsWith('/git/ref/heads/main')) return json(200, { object: { sha: 'base' } });
+    if (path.endsWith('/git/commits/base')) return json(200, { tree: { sha: 'basetree' } });
+    if (path.includes('/contents/content/maps/')) return json(200, { content: Buffer.from(oldMap).toString('base64'), encoding: 'base64' });
+    if (path.includes('/contents/')) return json(404, { message: 'Not Found' });
+    if (path.endsWith('/git/blobs')) return json(201, { sha: `blob${sent.length}` });
+    if (path.endsWith('/git/trees')) return json(201, { sha: 'tree1' });
+    if (path.endsWith('/git/commits')) return json(201, { sha: 'commit1' });
+    if (path.endsWith('/git/refs')) return json(201, {});
+    if (path.endsWith('/pulls')) return json(201, { html_url: 'https://github.com/selvabenz/interlinear-bible/pull/99', number: 99 });
+    return json(404, { message: 'unexpected' });
+  });
+
+  await page.goto('/#/settings');
+  await page.getByTestId('publish-settings').locator('input[type=password]').fill('github_pat_test');
+  await page.getByRole('button', { name: 'Check' }).click();
+  await expect(page.getByTestId('publish-settings')).toContainText('OK — maintainer can write to selvabenz/interlinear-bible');
+
+  await page.goto('/#/import');
+  await page.locator('input[type=file]').setInputFiles({ name: '3jn-aligned.usfm', mimeType: 'text/plain', buffer: Buffer.from(uwUsfm3JN()) });
+  await page.getByRole('button', { name: 'Check files' }).click();
+  await page.getByRole('button', { name: 'Publish (pull request)' }).click();
+  await expect(page.getByTestId('pr-link')).toHaveAttribute('href', 'https://github.com/selvabenz/interlinear-bible/pull/99');
+
+  const tree = sent.find((s) => s.path.endsWith('/git/trees'))!.body as { base_tree: string; tree: { path: string }[] };
+  expect(tree.base_tree).toBe('basetree');
+  expect(tree.tree.map((t) => t.path).sort()).toEqual(['content/maps/grc-ugnt__grc-tr/3JN.json', 'content/translations/ta-irv/3JN.aligned.usfm']);
+  // the repository's hand overrides survive in the published map
+  const blobs = sent.filter((s) => s.path.endsWith('/git/blobs')).map((s) => Buffer.from(String(s.body!.content), 'base64').toString('utf8'));
+  expect(blobs.find((b) => b.includes('"auto"'))).toContain('"1:1#2": null');
+  const pr = sent.find((s) => s.path.endsWith('/pulls'))!.body!;
+  expect(pr).toMatchObject({ base: 'main', title: 'content(3JN): 3 John (ta-irv)' });
+  expect(String(pr.head)).toMatch(/^content\/ta-irv-3jn-/);
+  expect(sent.every((s) => !s.path.includes('/contents/') || s.method === 'GET')).toBe(true);
 });
