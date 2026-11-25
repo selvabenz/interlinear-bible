@@ -157,8 +157,15 @@ files under `content/sources/<id>/`.
    * **info** — counts of unaligned words.
 4. **Save on this device** to read it in the app. It is marked *Local preview* and overrides the
    published copy in this browser only. *Remove local copy* goes back to the published version.
-5. **Download content bundle (.zip)** (on the *as aligned* report) gives the files laid out as
-   `content/…` — including the token maps — ready to commit (step 2 above).
+5. **Publish (pull request)** (maintainers, on the *as aligned* report) makes the book available
+   on every device: the app opens a pull request on GitHub with the book's files (USFM, token
+   maps — hand `overrides` already in the repository are kept). CI checks it; **merge it** and
+   the site redeploys about a minute later. Needs, once per browser, a GitHub token in
+   **Settings → Publishing**: a fine-grained personal access token for this repository only,
+   with *Contents: Read and write* and *Pull requests: Read and write* (press *Check* to test it).
+   The token is stored in that browser only.
+6. **Download content bundle (.zip)** gives the same files laid out as `content/…`, to commit
+   by hand instead (step 2 above).
 
 ## 4. What the validation checks
 

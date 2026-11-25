@@ -125,6 +125,7 @@ published books (local books are already in IndexedDB); the hover bar is hidden 
 | 2026-11-24 | Found: the Bridge 1 John file aligns ~150 Greek words in more than one place; kept as shared source words rather than dropped. vitest on Windows finds no tests when started from a lower-case drive path (`d:\…`); run from `D:\…`. |
 | 2026-11-24 | Whole-Bible survey (`npm run sources:survey`): all 66 books generate and map (OT 99.3–100 %, NT ~96.7–99 % matched). Found and fixed: TAGNT rows with alternative references in `[]`/`{}` were skipped (lost TR verses such as Jhn 7:53, Rom 16:25–27). Psalm titles: TAHOT has them as verse 0, the tC UHB has none — open question for when Psalms is aligned. |
 | 2026-11-24 | Owner: readers import only the aligned USFM; the app must bundle the word lists of all 66 books. Added `content/library/` (132 compact `ib-tokens-1` files, ~65 MB / 16 MB compressed), published as `data/library/` and fetched by the importer one book at a time; `content/sources/` is now an override (Philemon TR). Importer keeps same-named files apart. |
+| 2026-11-25 | Owner: imported books must reach every device; maintainers publish with a GitHub token, through a pull request. Added `src/lib/data/github.ts` (Git data API: blobs → tree → commit → branch → PR, keeps the repository map's `overrides`), Settings → Publishing (repo + fine-grained token, Check), importer “Publish (pull request)”. E2E test mocks the GitHub API. |
 
 ## 8. Where to start next
 

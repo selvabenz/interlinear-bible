@@ -29,8 +29,9 @@ available.
 - **Verse flags** for reviewers, saved on the device, exportable as JSON
 - **English / Tamil interface**
 - **Offline** — installable; books can be saved for offline use
-- **Import** — check new or updated USFM in the browser, preview it as a local book, and
-  download a ready-to-commit content bundle
+- **Import** — only the aligned USFM is needed, for any book; check it in the browser, preview
+  it as a local book, and (maintainers, with a GitHub token) publish it for every device as a
+  pull request — merging it redeploys the site
 - **English verse (ESV)** — shown when a reader adds their own ESV API key in Settings; the ESV
   text is © Crossway and is not published with the site
 
