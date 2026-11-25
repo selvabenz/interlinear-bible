@@ -36,14 +36,14 @@
     margin-top: 12px;
     padding: 13px;
     border: 1px solid var(--accent-line);
-    background: #f3faf8;
+    background: var(--accent-wash);
     border-radius: 10px;
   }
   .title {
     font-size: 10.5px;
     letter-spacing: 0.11em;
     text-transform: uppercase;
-    color: #4d8a84;
+    color: var(--accent-mid);
     margin-bottom: 8px;
   }
   textarea {
@@ -51,7 +51,7 @@
     min-height: 60px;
     resize: vertical;
     padding: 9px 11px;
-    border: 1px solid #cfe0dc;
+    border: 1px solid var(--accent-line);
     border-radius: 8px;
     background: var(--card);
     font-size: 13.5px;

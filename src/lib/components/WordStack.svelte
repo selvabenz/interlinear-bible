@@ -40,7 +40,7 @@
   onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onselect(item.key))}
   onmouseenter={() => onhover(item)}
 >
-  {#if mode === 'study' && layers.strong}<span class="row st">{item.st}</span>{/if}
+  {#if mode === 'study' && layers.strong}<span class="row st" dir={srcRtl ? 'ltr' : undefined}>{item.st}</span>{/if}
   {#if order === 'target'}
     <span class="row ta-w">{taText}</span>
     <span class="row src-w" class:muted={srcMuted} dir={srcRtl ? 'rtl' : undefined}>{srcText}</span>
@@ -48,10 +48,10 @@
     <span class="row src-w main" dir={srcRtl ? 'rtl' : undefined}>{srcText}</span>
     <span class="row ta-w second" class:muted={taMuted}>{taText}</span>
   {/if}
-  {#if layers.translit}<span class="row tr">{item.tr}</span>{/if}
-  {#if layers.gloss}<span class="row gl">{item.gl}</span>{/if}
-  {#if mode === 'read' && layers.strong}<span class="row st">{item.st}</span>{/if}
-  {#if layers.morph}<span class="row mo">{item.mo}</span>{/if}
+  {#if layers.translit}<span class="row tr" dir={srcRtl ? 'ltr' : undefined}>{item.tr}</span>{/if}
+  {#if layers.gloss}<span class="row gl" dir={srcRtl ? 'ltr' : undefined}>{item.gl}</span>{/if}
+  {#if mode === 'read' && layers.strong}<span class="row st" dir={srcRtl ? 'ltr' : undefined}>{item.st}</span>{/if}
+  {#if layers.morph}<span class="row mo" dir={srcRtl ? 'ltr' : undefined}>{item.mo}</span>{/if}
   {#if item.crossTo && item.crossRef}
     <button
       class="cross"
@@ -65,21 +65,34 @@
 </span>
 
 <style>
+  /*
+   * One interlinear unit: a column of rows. Rows keep one line height each so units on a line
+   * stay aligned; a row only wraps when the unit alone is wider than the whole line (a long
+   * joined gloss, several aligned words), so nothing ever spills out of the text column.
+   */
   .stack {
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;
+    min-width: 0;
+    max-width: 100%;
     text-align: start;
-    margin: 0 4px 4px 0;
+    margin: 0 3px 6px 0;
     padding: 3px 6px 4px;
-    border-radius: 7px;
+    border-radius: 8px;
     cursor: pointer;
     background: transparent;
     transition: background 0.16s ease;
     outline: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  .stack:hover {
-    background: #f3f0e8;
+  .stack:focus-visible {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  @media (hover: hover) {
+    .stack:hover {
+      background: var(--hover);
+    }
   }
   .stack.related {
     background: var(--related);
@@ -88,8 +101,10 @@
     background: var(--select);
   }
   .row {
-    white-space: nowrap;
     display: block;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .row:empty::before {
     content: '\00a0';
@@ -99,13 +114,12 @@
   .ta-w {
     font-family: var(--f-ta);
     font-size: var(--ta-size);
-    height: calc(var(--ta-size) * 1.6);
-    line-height: calc(var(--ta-size) * 1.6);
+    min-height: calc(var(--ta-size) * 1.65);
+    line-height: calc(var(--ta-size) * 1.65);
     color: var(--ink);
   }
   .study .ta-w {
-    color: #000;
-    font-weight: 900;
+    font-weight: 500;
     font-size: calc(var(--ta-size) + 1px);
   }
   .finding .ta-w {
@@ -122,24 +136,31 @@
   .src-w {
     font-family: var(--f-gr);
     font-size: var(--src-size);
-    height: calc(var(--src-size) * 1.42);
-    line-height: calc(var(--src-size) * 1.42);
+    min-height: calc(var(--src-size) * 1.45);
+    line-height: calc(var(--src-size) * 1.45);
     color: var(--greek);
   }
   .study .src-w {
-    color: #336f6b;
+    color: var(--accent-ink);
   }
   .src-w[dir='rtl'] {
     font-family: var(--f-he);
     font-size: calc(var(--src-size) + 3px);
+    line-height: calc((var(--src-size) + 3px) * 1.5);
+    min-height: calc((var(--src-size) + 3px) * 1.5);
     align-self: stretch;
     text-align: right;
   }
   .src-first .src-w.main {
     font-size: calc(var(--src-size) + 2px);
-    height: calc((var(--src-size) + 2px) * 1.5);
+    min-height: calc((var(--src-size) + 2px) * 1.5);
     line-height: calc((var(--src-size) + 2px) * 1.5);
     color: var(--ink);
+  }
+  .src-first .src-w.main[dir='rtl'] {
+    font-size: calc(var(--src-size) + 5px);
+    min-height: calc((var(--src-size) + 5px) * 1.5);
+    line-height: calc((var(--src-size) + 5px) * 1.5);
   }
   .src-first .ta-w.second {
     font-weight: 400;
@@ -154,49 +175,49 @@
   .tr {
     font-family: var(--f-gr);
     font-style: italic;
-    font-size: 11.5px;
-    height: 15px;
-    line-height: 15px;
+    font-size: 12px;
+    min-height: 16px;
+    line-height: 16px;
     color: var(--muted);
   }
   .gl {
-    font-size: 11.5px;
-    height: 15px;
-    line-height: 15px;
-    color: #4f5c63;
+    font-size: 12px;
+    min-height: 16px;
+    line-height: 16px;
+    color: var(--gloss);
   }
   .study .gl {
-    color: #1a282f;
+    color: var(--ink-2);
     font-size: 12.5px;
-    height: 17px;
+    min-height: 17px;
     line-height: 17px;
   }
   .st {
     font-family: var(--f-mono);
-    font-size: 9.5px;
-    height: 13px;
-    line-height: 13px;
+    font-size: 10px;
+    min-height: 14px;
+    line-height: 14px;
     color: var(--accent-ink);
   }
   .mo {
     font-family: var(--f-mono);
     font-size: 10px;
-    height: 12px;
-    line-height: 12px;
+    min-height: 14px;
+    line-height: 14px;
     color: var(--muted-2);
   }
   .cross {
     margin-top: 2px;
-    padding: 1px 5px;
+    padding: 1px 6px;
     border: none;
     border-radius: 999px;
-    background: #eef2f0;
+    background: var(--mark-soft);
     color: var(--mark);
-    font-size: 9.5px;
+    font-size: 10px;
     font-family: var(--f-mono);
   }
   .read .cross {
-    background: #eef2ea;
+    background: var(--gold-soft);
     color: var(--gold);
   }
 </style>

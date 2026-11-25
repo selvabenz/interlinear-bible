@@ -5,9 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Interlinear Bible</title>
     <meta name="description" content="Interlinear and reverse-interlinear Bible: IRV Tamil aligned word by word to the Greek and Hebrew, with Strong's numbers, morphology and semantic study marks." />
-    <meta name="theme-color" content="#2c6f6b" />
+    <meta name="theme-color" content="#f6f3ec" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <script>
+      // apply the saved colour theme before the first paint (no light flash in dark mode)
+      try {
+        var t = JSON.parse(localStorage.getItem('ib-prefs') || '{}').theme || 'system';
+        if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="app"></div>

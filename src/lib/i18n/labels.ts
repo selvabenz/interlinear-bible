@@ -112,7 +112,25 @@ const en = {
     'Each book is published once per source text. The edition a book was aligned against shows the alignment as made; the others are remapped automatically, word by word.',
   editionRemapped: (from: string, dropped: number) =>
     `Alignment remapped automatically from ${from}${dropped ? ` · ${dropped} source word${dropped === 1 ? '' : 's'} had no counterpart` : ''}.`,
-  editionStudyMarks: (src: string) => `Study marks are in the ${src} edition.`
+  editionStudyMarks: (src: string) => `Study marks are in the ${src} edition.`,
+  menu: 'Menu',
+  back: 'Back',
+  searchShort: 'Search',
+  searchHome: 'Search books, references and words',
+  searchBook: 'Search this book or go to a reference',
+  books: 'Books',
+  inThisBook: 'In this book',
+  inDownloaded: 'Downloaded books',
+  setApp: 'App settings',
+  setReading: 'Reading settings',
+  setStudy: 'Study settings',
+  theme: 'Theme',
+  themes: { system: 'Auto', light: 'Light', dark: 'Dark', sepia: 'Sepia' } as Record<string, string>,
+  language: 'Language',
+  view: 'View',
+  about: 'About and all settings',
+  showTools: 'Show the study tools beside the text (wide screens)',
+  heroShort: 'Each word stands over the Greek or Hebrew it renders.'
 };
 
 type Labels = typeof en;
@@ -224,7 +242,25 @@ const ta: Labels = {
     'ஒவ்வொரு புத்தகமும் ஒவ்வொரு மூல பாடத்திற்கும் தனியாக வெளியிடப்படுகிறது. எந்தப் பாடத்துடன் இணைக்கப்பட்டதோ அது இணைத்தபடியே காட்டப்படும்; மற்றவை சொல்லுக்குச் சொல் தானாக மாற்றியமைக்கப்படுகின்றன.',
   editionRemapped: (from: string, dropped: number) =>
     `இணைப்பு ${from} இலிருந்து தானாக மாற்றியமைக்கப்பட்டது${dropped ? ` · ${dropped} மூலச்சொற்களுக்கு இணை இல்லை` : ''}.`,
-  editionStudyMarks: (src: string) => `ஆய்வுக் குறிப்புகள் ${src} பதிப்பில் உள்ளன.`
+  editionStudyMarks: (src: string) => `ஆய்வுக் குறிப்புகள் ${src} பதிப்பில் உள்ளன.`,
+  menu: 'பட்டி',
+  back: 'பின்',
+  searchShort: 'தேடு',
+  searchHome: 'புத்தகம், வசனம், சொல் தேடு',
+  searchBook: 'இந்தப் புத்தகத்தில் தேடு அல்லது வசனத்திற்குச் செல்',
+  books: 'புத்தகங்கள்',
+  inThisBook: 'இந்தப் புத்தகத்தில்',
+  inDownloaded: 'பதிவிறக்கிய புத்தகங்கள்',
+  setApp: 'செயலி அமைப்புகள்',
+  setReading: 'வாசிப்பு அமைப்புகள்',
+  setStudy: 'ஆய்வு அமைப்புகள்',
+  theme: 'தோற்றம்',
+  themes: { system: 'தானியங்கி', light: 'வெளிர்', dark: 'இருள்', sepia: 'செபியா' },
+  language: 'மொழி',
+  view: 'காட்சி',
+  about: 'பற்றி, எல்லா அமைப்புகளும்',
+  showTools: 'ஆய்வுக் கருவிகளை உரையின் அருகில் காட்டு (அகலத் திரை)',
+  heroShort: 'ஒவ்வொரு சொல்லும் அது மொழிபெயர்க்கும் கிரேக்க அல்லது எபிரெயச் சொல்லின் மேல் நிற்கிறது.'
 };
 
 export const LABELS: Record<UiLang, Labels> = { en, ta };
@@ -279,6 +315,16 @@ export const LANG_NAME: Record<string, { en: string; ta: string }> = {
   te: { en: 'Telugu', ta: 'தெலுங்கு' },
   ml: { en: 'Malayalam', ta: 'மலையாள' },
   kn: { en: 'Kannada', ta: 'கன்னட' }
+};
+
+/** The word for "chapter" in a translation's language (chapter passages are named with it). */
+export const CHAPTER_WORD: Record<string, string> = {
+  ta: 'அத்தியாயம்',
+  en: 'Chapter',
+  hi: 'अध्याय',
+  te: 'అధ్యాయం',
+  ml: 'അദ്ധ്യായം',
+  kn: 'ಅಧ್ಯಾಯ'
 };
 
 export function langName(code: string, ui: UiLang): string {

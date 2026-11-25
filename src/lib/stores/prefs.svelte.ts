@@ -10,8 +10,13 @@ export interface Layers {
   notes: boolean;
 }
 
+export type Theme = 'system' | 'light' | 'dark' | 'sepia';
+export const THEMES: Theme[] = ['system', 'light', 'dark', 'sepia'];
+
 export interface Prefs {
   ui: UiLang;
+  /** colour theme; 'system' follows the device's light/dark setting */
+  theme: Theme;
   layers: Layers;
   order: Order;
   taSize: number;     // translation word size, px (design: 14–22, default 16)
@@ -30,6 +35,7 @@ export interface Prefs {
 const KEY = 'ib-prefs';
 const DEFAULTS: Prefs = {
   ui: 'en',
+  theme: 'system',
   layers: { translit: true, gloss: true, strong: true, morph: true, esv: false, notes: true },
   order: 'target',
   taSize: 16,
@@ -64,6 +70,12 @@ export function savePrefs(): void {
   } catch {
     /* storage unavailable */
   }
+}
+
+/** The palette actually shown: 'system' resolved against the device setting. */
+export function resolvedTheme(t: Theme): Exclude<Theme, 'system'> {
+  if (t !== 'system') return t;
+  return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function resetPrefs(): void {

@@ -11,6 +11,12 @@
   import type { WorkerResponse, WorkerBookResult } from '../lib/import.worker';
   import { prefs } from '../lib/stores/prefs.svelte';
   import { href } from '../lib/stores/router.svelte';
+  import { LABELS } from '../lib/i18n/labels';
+  import AppBar from '../lib/components/AppBar.svelte';
+  import AppMenu from '../lib/components/AppMenu.svelte';
+
+  const L = $derived(LABELS[prefs.ui]);
+  let menuOpen = $state(false);
 
   const ta = $derived(prefs.ui === 'ta');
   const T = $derived({
@@ -189,12 +195,9 @@
 </script>
 
 <div class="page">
-  <header class="hdr">
-    <div class="bar">
-      <a class="btn ghost" href="#/">{T.back}</a>
-      <h1>{T.title}</h1>
-    </div>
-  </header>
+  <AppBar menuLabel={L.menu} onmenu={() => (menuOpen = true)} width="860px">
+    <h1>{T.title}</h1>
+  </AppBar>
 
   <main class="main">
     <p class="intro">{T.intro}</p>
@@ -227,6 +230,7 @@
     </div>
 
     {#if files.length}
+      <div class="table-wrap">
       <table class="files">
         <tbody>
           {#each files as f (f.name)}
@@ -241,6 +245,7 @@
           {/each}
         </tbody>
       </table>
+      </div>
       <div class="actions">
         <button class="btn primary" disabled={busy} onclick={check}>{busy ? T.checking : T.check}</button>
         <button class="btn" onclick={() => { files = []; res = null; }}>{T.clear}</button>
@@ -338,25 +343,15 @@
   </main>
 </div>
 
+<AppMenu bind:open={menuOpen} />
+
 <style>
-  .hdr {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: var(--bar);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--line);
-  }
-  .bar {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 12px 22px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
   }
   h1 {
-    margin: 0;
+    margin: 0 0 0 4px;
     font-size: 16px;
     font-weight: 600;
   }
@@ -441,7 +436,7 @@
     padding: 16px 18px;
   }
   .result.bad {
-    border-color: #e6c9bf;
+    border-color: color-mix(in srgb, var(--danger) 30%, var(--card-line));
   }
   .rhead {
     display: flex;
@@ -529,9 +524,6 @@
     line-height: 1.6;
   }
   @media (max-width: 640px) {
-    .bar {
-      padding: 10px 16px;
-    }
     .main {
       padding: 20px 16px 60px;
     }

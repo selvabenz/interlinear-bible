@@ -22,6 +22,31 @@
     document.documentElement.style.setProperty('--src-size', `${prefs.srcSize}px`);
   });
 
+  // colour theme: follow the setting, and the device when it is 'system'
+  let systemDark = $state(matchMedia('(prefers-color-scheme: dark)').matches);
+  $effect(() => {
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    const on = () => (systemDark = mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  });
+  const theme = $derived(prefs.theme === 'system' ? (systemDark ? 'dark' : 'light') : prefs.theme);
+  $effect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg || '#f6f3ec');
+    // print on paper colours whatever the screen theme is
+    const before = () => (root.dataset.theme = 'light');
+    const after = () => (root.dataset.theme = theme);
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  });
+
   $effect(() => {
     const r = router.route;
     window.scrollTo({ top: 0 });

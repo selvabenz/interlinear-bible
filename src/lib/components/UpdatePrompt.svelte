@@ -40,21 +40,22 @@
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 18px;
+    bottom: max(18px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
     z-index: 60;
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px 12px 10px 16px;
-    background: rgba(31, 42, 51, 0.95);
-    color: var(--card);
+    background: var(--dark);
+    color: var(--on-dark);
     border-radius: 10px;
     font-size: 13px;
-    box-shadow: 0 16px 34px -20px rgba(31, 42, 51, 0.6);
+    box-shadow: var(--shadow-pop);
+    flex-wrap: wrap;
     max-width: calc(100vw - 32px);
   }
   .light {
-    color: #cfd6d3;
+    color: var(--on-dark-2);
   }
 </style>

@@ -25,7 +25,12 @@ available.
   unfoldingWord's UGNT / UHB; the text a book was aligned against shows the alignment as made,
   the other is remapped automatically word by word (maps kept in `content/maps/`)
 - **Layers** — transliteration, English gloss, Strong's, morphology, study marks, English verse
-- **Search** Tamil words, Greek/Hebrew, transliteration, glosses or Strong's numbers
+- **One menu** — a slim app bar with the menu and search; every setting lives in the menu under
+  App, Reading and Study settings; section headings stay in view while the verses scroll
+- **Themes** — Auto (follows the device), Light, Dark and Sepia; layouts for phones, tablets and
+  desktops in every view and word order
+- **Search** Tamil words, Greek/Hebrew, transliteration, glosses or Strong's numbers; book names
+  and references ("1 John 3:16", "பிலேமோன் 1:10") jump straight there, also from the library
 - **Verse flags** for reviewers, saved on the device, exportable as JSON
 - **English / Tamil interface**
 - **Offline** — installable; books can be saved for offline use

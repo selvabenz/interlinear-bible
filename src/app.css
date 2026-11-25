@@ -1,13 +1,19 @@
-/* Design tokens from docs/design/*.design.html */
+/*
+ * Design tokens. Light is the original palette from docs/design/*.design.html; dark and sepia
+ * redefine the same names, so components only ever use var(--…). The theme is chosen in
+ * Settings → App and set as data-theme on <html> (index.html applies it before first paint).
+ */
 :root {
   --bg: #f6f3ec;
-  --bar: rgba(250, 248, 244, 0.95);
+  --bar: rgba(250, 248, 244, 0.97);
   --line: #e6e0d2;
   --line-soft: #f0ebdd;
   --line-faint: #f4efe3;
   --card: #fffdf8;
   --card-line: #ece5d6;
   --input-line: #ddd6c6;
+  --hover: #f3f0e8;
+  --soft: #f1eee6;
   --ink: #1f2a33;
   --ink-2: #2a3740;
   --ink-3: #3a474e;
@@ -20,12 +26,17 @@
   --muted-6: #a8afb3;
   --muted-7: #b3b9bc;
   --faint: #cdd2cf;
+  --gloss: #4f5c63;
   --accent: #2c6f6b;
   --accent-dark: #1f5450;
   --accent-ink: #26615d;
+  --accent-mid: #4d8a84;
   --accent-soft: #e7f3f1;
   --accent-wash: #f4faf9;
+  --accent-cell: #f9fdfc;
   --accent-line: #d7e6e2;
+  --accent-line-soft: #e2eeeb;
+  --on-accent: #fffdf8;
   --select: #d6eae6;
   --related: #edf6f4;
   --gold: #8a6a24;
@@ -36,19 +47,151 @@
   --greek-strong: #3c5a58;
   --note-bg: #efece2;
   --dark: #1f2a33;
+  --on-dark: #fffdf8;
+  --on-dark-2: #e8e3d6;
+  --on-dark-accent: #cfe6e2;
+  --on-dark-muted: #9dbdb9;
   --danger: #a3402a;
   --danger-soft: #f8e9e4;
+  --scrim: rgba(18, 24, 30, 0.38);
+  --shadow-1: 0 1px 2px rgba(31, 42, 51, 0.04), 0 10px 30px -22px rgba(31, 42, 51, 0.2);
+  --shadow-pop: 0 18px 40px -18px rgba(31, 42, 51, 0.38);
 
   --f-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --f-ta: 'Vijaya', 'Noto Serif Tamil', 'Latha', 'Nirmala UI', serif;
   --f-ta-head: 'Noto Serif Tamil', 'Latha', 'Nirmala UI', serif;
   --f-gr: 'Gentium Book Plus', 'SBL Greek', 'Times New Roman', serif;
-  --f-he: 'SBL Hebrew', 'Ezra SIL', 'Noto Serif Hebrew', 'Times New Roman', serif;
+  --f-he: 'SBL Hebrew', 'Noto Serif Hebrew', 'Ezra SIL', 'Times New Roman', serif;
   --f-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
 
   --ta-size: 16px;
   --src-size: 15.5px;
+
+  /* layout */
+  --bar-h: 52px;
+  --nav-h: 48px; /* the section map under the app bar in a book */
+  --bar-offset: var(--bar-h); /* 0 while the app bar is slid away on phones */
+  --gutter: 16px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --read-w: 46rem;
+
   color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #11161a;
+  --bar: rgba(17, 22, 26, 0.97);
+  --line: #2a333a;
+  --line-soft: #232b31;
+  --line-faint: #1f262b;
+  --card: #182025;
+  --card-line: #263038;
+  --input-line: #35414a;
+  --hover: #212a30;
+  --soft: #222a30;
+  --ink: #e5e9e7;
+  --ink-2: #d9dfdc;
+  --ink-3: #c4cbc8;
+  --ink-4: #b2bab7;
+  --muted: #9ea9a7;
+  --muted-2: #939e9c;
+  --muted-3: #889391;
+  --muted-4: #7d8886;
+  --muted-5: #6f7a79;
+  --muted-6: #626d6c;
+  --muted-7: #57615f;
+  --faint: #47514f;
+  --gloss: #aab4b2;
+  --accent: #62b5ab;
+  --accent-dark: #82cbc2;
+  --accent-ink: #7cc4bb;
+  --accent-mid: #6fb3aa;
+  --accent-soft: #1d3532;
+  --accent-wash: #16241f;
+  --accent-cell: #17221f;
+  --accent-line: #2a4642;
+  --accent-line-soft: #243a37;
+  --on-accent: #0c1a18;
+  --select: #22433e;
+  --related: #1a2e2b;
+  --gold: #dcb76c;
+  --gold-soft: #2c2616;
+  --mark: #84d3c8;
+  --mark-soft: #1c3431;
+  --greek: #a8c3bf;
+  --greek-strong: #bcd6d2;
+  --note-bg: #252c31;
+  --dark: #0b0f12;
+  --danger: #e68c75;
+  --danger-soft: #3a231e;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 18px 44px -14px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+:root[data-theme='sepia'] {
+  --bg: #f1e7d0;
+  --bar: rgba(243, 234, 213, 0.97);
+  --line: #dfd0ae;
+  --line-soft: #e9dcc0;
+  --line-faint: #eee3ca;
+  --card: #f8f0dc;
+  --card-line: #e3d5b5;
+  --input-line: #d4c39e;
+  --hover: #ede1c5;
+  --soft: #ebdfc3;
+  --ink: #3b2f22;
+  --ink-2: #45382a;
+  --ink-3: #524434;
+  --ink-4: #5d4e3c;
+  --muted: #6e604c;
+  --muted-2: #786a55;
+  --muted-3: #85765f;
+  --muted-4: #92836b;
+  --muted-5: #a08f75;
+  --muted-6: #ab9b80;
+  --muted-7: #b6a78b;
+  --faint: #cdbf9f;
+  --gloss: #625441;
+  --accent: #7a5a2e;
+  --accent-dark: #5e431f;
+  --accent-ink: #6b4f27;
+  --accent-mid: #8f6e3e;
+  --accent-soft: #eadcbc;
+  --accent-wash: #f3e8cf;
+  --accent-cell: #f6ecd6;
+  --accent-line: #dfcca5;
+  --accent-line-soft: #e7d8b8;
+  --on-accent: #fbf5e6;
+  --select: #e6d2a6;
+  --related: #efe2c4;
+  --gold: #8a4f1c;
+  --gold-soft: #f0dfbf;
+  --mark: #6a3f12;
+  --mark-soft: #ead9b8;
+  --greek: #6a5a44;
+  --greek-strong: #5a4a34;
+  --note-bg: #ece0c4;
+  --dark: #3b2f22;
+  --on-dark: #fbf5e6;
+  --on-dark-2: #eadfc8;
+  --on-dark-accent: #f0d9a8;
+  --on-dark-muted: #c9b48c;
+  --danger: #9c3b22;
+  --danger-soft: #f3dcd0;
+  --scrim: rgba(40, 28, 12, 0.35);
+  --shadow-1: 0 1px 2px rgba(59, 47, 34, 0.05), 0 10px 30px -22px rgba(59, 47, 34, 0.25);
+  --shadow-pop: 0 18px 40px -18px rgba(59, 47, 34, 0.45);
+  color-scheme: light;
+}
+
+@media (min-width: 600px) {
+  :root {
+    --gutter: 24px;
+  }
 }
 
 html,
@@ -56,6 +199,13 @@ body {
   margin: 0;
   padding: 0;
   background: var(--bg);
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html:has(dialog[open]) {
+  overflow: hidden;
 }
 * {
   box-sizing: border-box;
@@ -65,15 +215,16 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 a {
   color: var(--accent);
   text-decoration: none;
-  border-bottom: 1px solid rgba(44, 111, 107, 0.3);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
 a:hover {
   color: var(--accent-dark);
-  border-bottom-color: rgba(44, 111, 107, 0.7);
+  border-bottom-color: color-mix(in srgb, var(--accent) 70%, transparent);
 }
 input,
 textarea,
@@ -86,7 +237,7 @@ button {
   cursor: pointer;
 }
 ::selection {
-  background: #cfe6e2;
+  background: var(--select);
 }
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -103,25 +254,36 @@ button {
 .gr {
   font-family: var(--f-gr);
 }
+.he,
+.gr[dir='rtl'] {
+  font-family: var(--f-he);
+}
 .eyebrow {
-  font-size: 10px;
+  font-size: 10.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted-6);
+  color: var(--muted-5);
 }
 .card {
   background: var(--card);
   border: 1px solid var(--card-line);
-  border-radius: 12px;
+  border-radius: var(--r-md);
 }
 .btn {
-  padding: 7px 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 13px;
   border: 1px solid var(--input-line);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--card);
-  font-size: 12.5px;
+  font-size: 13px;
+  line-height: 1.3;
   color: var(--ink-3);
-  white-space: nowrap;
+  text-align: center;
+  max-width: 100%;
 }
 .btn:hover {
   border-color: var(--accent);
@@ -129,16 +291,20 @@ button {
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--card);
+  color: var(--on-accent);
   font-weight: 500;
 }
 .btn.primary:hover {
   background: var(--accent-dark);
+  color: var(--on-accent);
 }
 .btn.ghost {
   border-color: transparent;
   background: transparent;
   color: var(--muted-2);
+}
+.btn.ghost:hover {
+  background: var(--hover);
 }
 .btn.danger {
   color: var(--danger);
@@ -147,45 +313,75 @@ button {
   opacity: 0.55;
   cursor: default;
 }
+a.btn {
+  border-bottom-width: 1px;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-3);
+}
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
 .chip {
   padding: 5px 11px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 12px;
   border: 1px solid var(--input-line);
   background: var(--card);
-  color: var(--muted-4);
+  color: var(--muted-3);
 }
 .chip[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-dark);
 }
+/* segmented control: shrinks and wraps its labels instead of overflowing */
 .seg {
   display: flex;
+  max-width: 100%;
   border: 1px solid var(--input-line);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   overflow: hidden;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  background: var(--card);
 }
 .seg button {
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 7px 11px;
   border: none;
-  font-size: 12px;
-  background: var(--card);
-  color: var(--muted-4);
-  white-space: nowrap;
+  font-size: 12.5px;
+  line-height: 1.3;
+  background: transparent;
+  color: var(--muted-3);
+  overflow-wrap: anywhere;
+}
+.seg button + button {
+  border-left: 1px solid var(--input-line);
 }
 .seg button[aria-pressed='true'] {
   background: var(--accent);
-  color: var(--card);
+  color: var(--on-accent);
 }
 .input {
   padding: 7px 11px;
   border: 1px solid var(--input-line);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--card);
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
+  max-width: 100%;
 }
 .input:focus {
   border-color: var(--accent);
@@ -208,19 +404,19 @@ button {
 }
 .badge.muted {
   color: var(--muted-3);
-  background: #f1eee6;
+  background: var(--soft);
 }
 .pill {
   display: inline-block;
   padding: 3px 9px;
   border-radius: 999px;
   font-size: 11px;
-  background: #eef2ea;
+  background: var(--soft);
   color: var(--muted-2);
 }
 .pill.ok {
   background: var(--accent-soft);
-  color: #4d8a84;
+  color: var(--accent-mid);
 }
 .pill.flag {
   background: var(--mark-soft);
@@ -235,7 +431,20 @@ button {
   white-space: nowrap;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::backdrop {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @media print {
+  :root {
+    color-scheme: light;
+  }
   html,
   body {
     background: #fff;

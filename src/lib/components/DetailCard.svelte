@@ -112,6 +112,13 @@
     flex-direction: column;
     gap: 3px;
     min-width: 0;
+    flex: 1 1 180px;
+    overflow-wrap: anywhere;
+  }
+  .card-read,
+  .card-inline,
+  .card-panel {
+    overflow-wrap: anywhere;
   }
   .words .ta {
     font-family: var(--f-ta);
@@ -131,7 +138,7 @@
     font-family: var(--f-gr);
     font-style: italic;
     font-size: 13px;
-    color: #8b9298;
+    color: var(--muted-4);
   }
   .spacer {
     flex: 1 1 10px;
@@ -158,7 +165,13 @@
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0;
+    padding: 6px 8px;
+    margin: -6px -8px 0 0;
+    border-radius: 6px;
+  }
+  .close:hover {
+    background: var(--hover);
+    color: var(--ink);
   }
   .eyebrow {
     margin-bottom: 7px;
@@ -177,7 +190,7 @@
   .ml {
     font-size: 12px;
     line-height: 1.55;
-    color: #8b9298;
+    color: var(--muted-4);
     margin-top: 7px;
   }
   .eng {
@@ -223,7 +236,7 @@
     align-items: baseline;
     gap: 7px;
     padding: 5px 10px;
-    border: 1px solid #dfe8e5;
+    border: 1px solid var(--accent-line-soft);
     border-radius: 999px;
     background: var(--card);
   }
@@ -246,21 +259,21 @@
   }
   .card-read .head {
     padding: 16px 18px 14px;
-    border-bottom: 1px solid #e2eeeb;
+    border-bottom: 1px solid var(--accent-line-soft);
   }
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
     gap: 1px;
-    background: #e2eeeb;
+    background: var(--accent-line-soft);
   }
   .cell {
-    background: #f9fdfc;
+    background: var(--accent-cell);
     padding: 14px 18px;
   }
   .card-read .occ {
     padding: 14px 18px;
-    border-top: 1px solid #e2eeeb;
+    border-top: 1px solid var(--accent-line-soft);
   }
 
   /* Study view, narrow screens: inline under the verse */
@@ -280,7 +293,7 @@
   .stackcells {
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px solid #e2eeeb;
+    border-top: 1px solid var(--accent-line-soft);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -306,13 +319,13 @@
   }
   .sec {
     padding: 13px 17px;
-    border-bottom: 1px solid #f2ecdf;
+    border-bottom: 1px solid var(--line-soft);
   }
   .sec.last {
     border-bottom: none;
   }
   .card-panel .occ {
     padding: 13px 17px;
-    border-top: 1px solid #f2ecdf;
+    border-top: 1px solid var(--line-soft);
   }
 </style>

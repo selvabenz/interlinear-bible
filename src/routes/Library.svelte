@@ -7,12 +7,17 @@
   import { LABELS } from '../lib/i18n/labels';
   import { prefs } from '../lib/stores/prefs.svelte';
   import { href } from '../lib/stores/router.svelte';
+  import AppBar from '../lib/components/AppBar.svelte';
+  import AppMenu from '../lib/components/AppMenu.svelte';
+  import SearchBox from '../lib/components/SearchBox.svelte';
+  import Icon from '../lib/components/Icon.svelte';
 
   const L = $derived(LABELS[prefs.ui]);
   let catalog = $state.raw<Catalog | null>(null);
   let local = $state.raw<BookMeta[]>([]);
   let error = $state('');
   let saving = $state<Record<string, string>>({});
+  let menuOpen = $state(false);
 
   onMount(() => {
     loadCatalog()
@@ -95,41 +100,20 @@
 </script>
 
 <div class="page">
-  <header class="hdr">
-    <div class="bar">
-      <div class="brand">
-        <span class="logo" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 16 16"><path d="M2 3.2C3.6 2.4 5.6 2.4 8 3.6c2.4-1.2 4.4-1.2 6-.4v9.6c-1.6-.8-3.6-.8-6 .4-2.4-1.2-4.4-1.2-6-.4z M8 3.6v9.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" /></svg>
-        </span>
-        <div>
-          <div class="name">{L.appName}</div>
-          <div class="deck">{translation?.shortName ?? translation?.name ?? ''}</div>
-        </div>
-      </div>
-      <div class="grow"></div>
-      <a class="btn" href={href({ name: 'import' })}>{L.import}</a>
-      <a class="btn" href={href({ name: 'settings' })}>{L.settings}</a>
-      <div class="seg" role="group" aria-label="Interface language">
-        <button aria-pressed={prefs.ui === 'en'} onclick={() => (prefs.ui = 'en')}>EN</button>
-        <button aria-pressed={prefs.ui === 'ta'} onclick={() => (prefs.ui = 'ta')}>தமிழ்</button>
-      </div>
-    </div>
-  </header>
+  <AppBar menuLabel={L.menu} onmenu={() => (menuOpen = true)} width="1100px">
+    <SearchBox {L} {catalog} translation={trId} {local} others />
+  </AppBar>
 
   <main class="main">
     <section class="hero">
-      <h1>{L.heroTitle}</h1>
-      <p>{L.heroBody}</p>
-      <div class="hero-meta">
-        <span class="pill ok">{L.booksAvailable(available.length)}</span>
-        {#if translations.length > 1}
-          <label class="trsel">
-            <span class="eyebrow">{L.translation}</span>
-            <select class="input" value={trId} onchange={(e) => (prefs.translation = (e.target as HTMLSelectElement).value)}>
-              {#each translations as t (t.id)}<option value={t.id}>{t.name}</option>{/each}
-            </select>
-          </label>
-        {/if}
+      <span class="logo" aria-hidden="true"><Icon name="book" size={22} /></span>
+      <div>
+        <h1>{L.heroTitle}</h1>
+        <p>
+          {L.heroShort}
+          <span class="pill ok">{L.booksAvailable(available.length)}</span>
+          {#if translation}<span class="trname">{translation.shortName ?? translation.name}</span>{/if}
+        </p>
       </div>
     </section>
 
@@ -141,39 +125,44 @@
       <section class="testament">
         <div class="thead">
           <h2>{g.label}</h2>
-          <span class="mono count">{g.count} / {g.t === 'OT' ? 39 : 27} {L.available}</span>
+          <span class="mono count">{g.count} / {g.t === 'OT' ? 39 : 27}</span>
         </div>
         <div class="grid">
           {#each g.books as e (e.id)}
             {#if e.data}
               {@const k = `${trId}/${e.id}/${e.source}`}
+              {@const saved = !!e.source && isSavedOffline(trId, e.id, e.source)}
               <article class="book card">
                 <div class="btop">
-                  <div>
+                  <div class="names">
                     <div class="bnative">{e.native}</div>
                     <div class="ben">{e.en}</div>
                   </div>
                   {#if e.local}<span class="pill flag">{L.local}</span>{/if}
                 </div>
                 <div class="bstats mono">
-                  <span>{e.data.chapters} {L.chapter.toLowerCase()}{e.data.chapters === 1 ? '' : 's'}</span>
+                  <span>{e.data.chapters} {L.chapter.toLowerCase()}{e.data.chapters === 1 || prefs.ui === 'ta' ? '' : 's'}</span>
                   <span>{e.data.verses} {L.verses}</span>
-                  {#if e.data.hasSemantic}<span>{e.data.units} {L.units}</span>{/if}
                   {#if e.data.findings}<span class="fl">◆ {e.data.findings}</span>{/if}
+                  {#if e.editions.length > 1}
+                    {#each e.editions as s (s)}<span class="ed" class:on={s === e.source}>{srcName(s)}</span>{/each}
+                  {/if}
                 </div>
-                {#if e.editions.length > 1}
-                  <div class="beds mono" aria-label={L.sourceText}>
-                    {#each e.editions as s (s)}<span class:on={s === e.source}>{srcName(s)}</span>{/each}
-                  </div>
-                {/if}
                 <div class="bactions">
-                  <a class="btn primary" href={href({ name: 'read', translation: trId, book: e.id })}>{L.openReading}</a>
-                  <a class="btn" href={href({ name: 'study', translation: trId, book: e.id })}>{L.openStudy}</a>
+                  <a class="btn primary open" href={href({ name: 'read', translation: trId, book: e.id })}>{L.openReading}</a>
+                  <a class="btn ghost" href={href({ name: 'study', translation: trId, book: e.id })}><Icon name="study" size={17} />{L.openStudy}</a>
                   <span class="grow"></span>
                   {#if !e.local}
-                    <button class="btn ghost off" title={L.offline} onclick={() => offline(e)}>
-                      {saving[k] ?? (e.source && isSavedOffline(trId, e.id, e.source) ? '✓ ' + L.offlineSaved : '↓ ' + L.offline)}
-                    </button>
+                    {#if saving[k] && saving[k] !== L.offlineSaved}
+                      <span class="saving mono">{saving[k]}</span>
+                    {:else}
+                      <button class="icon-btn off" class:done={saved || saving[k] === L.offlineSaved}
+                        title={saved || saving[k] === L.offlineSaved ? L.offlineSaved : L.offline}
+                        aria-label={saved || saving[k] === L.offlineSaved ? L.offlineSaved : L.offline}
+                        onclick={() => offline(e)}>
+                        <Icon name={saved || saving[k] === L.offlineSaved ? 'check' : 'download'} size={18} />
+                      </button>
+                    {/if}
                   {/if}
                 </div>
               </article>
@@ -201,104 +190,79 @@
   </main>
 </div>
 
+<AppMenu bind:open={menuOpen} />
+
 <style>
-  .hdr {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: var(--bar);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--line);
-  }
-  .bar {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 12px 22px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .logo {
-    display: inline-flex;
-    width: 34px;
-    height: 34px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9px;
-    background: var(--accent);
-    color: var(--card);
-  }
-  .name {
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .deck {
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted-4);
-  }
-  .grow {
-    flex: 1 1 10px;
-  }
   .main {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 34px 22px 80px;
+    padding: 22px var(--gutter) 80px;
   }
   .hero {
-    max-width: 720px;
-    margin-bottom: 34px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    max-width: 760px;
+    margin-bottom: 22px;
+  }
+  .logo {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--accent);
+    color: var(--on-accent);
   }
   .hero h1 {
     font-family: var(--f-gr);
     font-weight: 400;
-    font-size: clamp(26px, 4vw, 36px);
+    font-size: clamp(22px, 3.4vw, 30px);
     line-height: 1.2;
-    margin: 0 0 12px;
+    margin: 2px 0 6px;
     color: var(--ink);
   }
   :global(html[lang='ta']) .hero h1 {
     font-family: var(--f-ta-head);
-    font-size: clamp(22px, 3.4vw, 30px);
+    font-size: clamp(20px, 3vw, 26px);
   }
   .hero p {
-    font-size: 15px;
-    line-height: 1.65;
-    color: var(--muted);
-    margin: 0 0 16px;
-  }
-  .hero-meta {
     display: flex;
-    align-items: center;
-    gap: 16px;
     flex-wrap: wrap;
-  }
-  .trsel {
-    display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px 10px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0;
+  }
+  .trname {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-4);
   }
   .err {
     color: var(--danger);
   }
   .testament {
-    margin-bottom: 30px;
+    margin-bottom: 26px;
   }
+  /* the testament heading stays in view while its books scroll under it */
   .thead {
+    position: sticky;
+    top: var(--bar-offset);
+    z-index: 5;
     display: flex;
     align-items: baseline;
     gap: 12px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+    margin: 0 calc(-1 * var(--gutter)) 12px;
+    padding: 12px var(--gutter) 8px;
+    background: var(--bg);
     border-bottom: 1px solid var(--line);
+    transition: top 0.22s ease;
   }
   .thead h2 {
     margin: 0;
@@ -318,11 +282,16 @@
     gap: 12px;
   }
   .book.card {
-    padding: 16px 16px 14px;
+    position: relative;
+    padding: 14px 14px 10px 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    box-shadow: 0 1px 2px rgba(31, 42, 51, 0.03), 0 10px 30px -24px rgba(31, 42, 51, 0.18);
+    gap: 8px;
+    box-shadow: var(--shadow-1);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .book.card:hover {
+    border-color: var(--accent-line);
   }
   .btop {
     display: flex;
@@ -330,61 +299,77 @@
     align-items: flex-start;
     gap: 8px;
   }
+  .names {
+    min-width: 0;
+  }
   .bnative {
     font-family: var(--f-ta-head);
     font-size: 19px;
     font-weight: 500;
     line-height: 1.3;
+    overflow-wrap: anywhere;
   }
   .ben {
-    font-size: 12px;
+    font-size: 12.5px;
     color: var(--muted-4);
   }
   .bstats {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: 3px 12px;
     font-size: 10.5px;
-    color: var(--muted-3);
+    color: var(--muted-4);
   }
   .bstats .fl {
     color: var(--mark);
   }
-  .beds {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    font-size: 10.5px;
-    color: var(--muted-3);
-  }
-  .beds span.on {
-    color: var(--ink, inherit);
+  .ed.on {
+    color: var(--ink-3);
     font-weight: 600;
   }
   .bactions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
   }
-  .bactions a.btn {
-    border-bottom-width: 1px;
+  /* the whole card opens the reading view; Study and offline sit above that link */
+  .open::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .bactions > :not(.open) {
+    position: relative;
+    z-index: 1;
+  }
+  .grow {
+    flex: 1 1 auto;
   }
   .off {
-    font-size: 11.5px;
-    padding: 6px 6px;
+    width: 36px;
+    height: 36px;
+    color: var(--muted-3);
+  }
+  .off.done {
+    color: var(--accent);
+  }
+  .saving {
+    font-size: 11px;
+    color: var(--muted-3);
   }
   .book.missing {
     padding: 12px 14px;
     border: 1px dashed var(--input-line);
-    border-radius: 12px;
+    border-radius: var(--r-md);
     opacity: 0.6;
   }
   .book.missing .bnative {
     font-size: 15px;
   }
   .toggle {
-    margin: 10px 0 30px;
+    margin: 6px 0 30px;
   }
   .credits {
     border-top: 1px solid var(--line);
@@ -396,12 +381,9 @@
   .credits p {
     margin: 0 0 4px;
   }
-  @media (max-width: 640px) {
-    .bar {
-      padding: 10px 16px;
-    }
-    .main {
-      padding: 24px 16px 60px;
+  @media (max-width: 599px) {
+    .logo {
+      display: none;
     }
   }
 </style>

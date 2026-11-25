@@ -6,7 +6,7 @@ import type { Passage, SourceWord, TargetWord, Unit, Verse } from '../pipeline/t
 import type { LoadedBook } from './loader';
 import { refParts, compareRef } from './loader';
 import { describeMorph } from '../morph';
-import { SUPPORT, UNIT_TYPE, statusLabel, type UiLang, type Labels } from '../i18n/labels';
+import { SUPPORT, UNIT_TYPE, CHAPTER_WORD, statusLabel, type UiLang, type Labels } from '../i18n/labels';
 
 export type Order = 'target' | 'source';
 
@@ -117,10 +117,14 @@ export function referencedChapters(verses: Verse[]): number[] {
   return [...out];
 }
 
-export function passageLabel(p: Passage, ui: UiLang, L: Labels): string {
+/**
+ * A passage's name. Chapter passages are named in the Bible's own language when `lang` (the
+ * translation's language) is known — a Tamil Bible says "அத்தியாயம் 2" in either interface.
+ */
+export function passageLabel(p: Passage, ui: UiLang, L: Labels, lang?: string): string {
   const l = p.label?.[ui] ?? p.label?.en;
   if (l) return l;
-  if (/^c\d+$/.test(p.id)) return `${L.chapter} ${p.id.slice(1)}`;
+  if (/^c\d+$/.test(p.id)) return `${(lang && CHAPTER_WORD[lang]) || L.chapter} ${p.id.slice(1)}`;
   return p.id.charAt(0) + p.id.slice(1).toLowerCase().replace(/_/g, ' ');
 }
 
