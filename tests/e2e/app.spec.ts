@@ -85,7 +85,7 @@ test('study view: rail, study marks, side or inline panel', async ({ page }) => 
   await page.goto('/#/study/ta-irv/PHM/THANKSGIVING');
   await openMenu(page);
   await page.getByRole('button', { name: 'Study tools' }).click();
-  await expect(page.locator('.rail')).toContainText('Passage map');
+  await expect(page.locator('.rail').filter({ hasText: 'Passage map' })).toBeVisible();
   await expect(page.locator('.maprow').first()).toContainText('swapped');
   const mark = page.locator('.rail .finding').first();
   await expect(mark).toBeVisible();
@@ -240,24 +240,47 @@ test('no text spills out of the page, in either view, order or language', async 
   }
 });
 
-test('the section map stays under the app bar and follows the reading', async ({ page }) => {
-  await page.goto('/#/read/ta-irv/PHM/APPEAL');
+test('the progress rail stays under the app bar and fills as you read', async ({ page }) => {
+  await page.goto('/#/read/ta-irv/1JN/c1');
   await expect(page.locator('.stack').first()).toBeVisible();
-  const map = page.locator('.secnav');
-  const here = map.locator('.chip-sec.here');
-  await expect(here.first()).toHaveAttribute('aria-current', 'location');
-  // read to the end: the map is still in view and the last section is the current one
+  const nav = page.locator('.secnav.kind-rail');
+  const current = nav.locator('.piece[aria-current="location"]');
+  await expect(nav.locator('.row .count')).toHaveText(/^1\//);
+  const fill = () => current.locator('i').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+  expect(await fill()).toBeLessThan(0.5);
+  // read to the end: still in view, now on a later section, and that section is filled
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await page.waitForTimeout(500);
-  const box = (await map.boundingBox())!;
+  const box = (await nav.boundingBox())!;
   expect(box.y).toBeGreaterThanOrEqual(-1);
   expect(box.y).toBeLessThan(80);
-  await expect(here.last()).toHaveAttribute('aria-current', 'location');
-  // another passage is one tap away; chapters are named in the Bible's language
-  await page.goto('/#/read/ta-irv/1JN/c2');
-  await expect(page.getByRole('heading', { level: 1, name: 'அத்தியாயம் 2' })).toBeVisible();
-  await map.getByRole('button', { name: /அத்தியாயம் 3/ }).click();
+  await expect(nav.locator('.row .count')).not.toHaveText(/^1\//);
+  expect(await fill()).toBeGreaterThan(0.95);
+  // the list of sections opens from the name and closes with Escape
+  await nav.locator('.row').click();
+  await expect(nav.locator('.list')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(nav.locator('.list')).toHaveCount(0);
+  // another chapter is one tap away; chapters are named in the Bible's language
+  await nav.getByRole('button', { name: /அத்தியாயம் 3/ }).click();
   await expect(page).toHaveURL(/1JN\/c3/);
+  await expect(page.getByRole('heading', { level: 1, name: 'அத்தியாயம் 3' })).toBeVisible();
+});
+
+test('the section navigator style is chosen in Reading settings', async ({ page }) => {
+  await page.goto('/#/read/ta-irv/1JN/c1');
+  await openSettings(page, 'Reading settings');
+  await page.getByRole('button', { name: 'Tabs', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.secnav.kind-tabs .tab[aria-current="location"]')).toHaveCount(1);
+  await openSettings(page, 'Reading settings');
+  await page.getByRole('button', { name: 'Now reading' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.secnav.kind-ring .ring')).toContainText('1:1');
+  // its timeline opens in a sheet and jumps to another chapter
+  await page.locator('.secnav .nowline').click();
+  await page.locator('dialog[open]').getByRole('button', { name: /அத்தியாயம் 2/ }).click();
+  await expect(page).toHaveURL(/1JN\/c2/);
 });
 
 test('the colour theme is chosen in App settings and remembered', async ({ page }) => {

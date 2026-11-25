@@ -10,7 +10,7 @@
   import { loadCatalog } from '../data/loader';
   import { sourcesFor } from '../pipeline/sources';
   import { LABELS } from '../i18n/labels';
-  import { prefs, resetPrefs, THEMES } from '../stores/prefs.svelte';
+  import { prefs, resetPrefs, THEMES, NAV_STYLES } from '../stores/prefs.svelte';
   import { flags, exportFlags, importFlags, clearAllFlags } from '../stores/flags.svelte';
   import type { ReaderCtx } from '../stores/ui.svelte';
   import { testEsvKey } from '../esv';
@@ -192,6 +192,14 @@
           <button aria-pressed={prefs.order === 'source'} onclick={() => setOrder('source')}>{reader ? L.orderSource(reader.sourceLang) : T.orderS}</button>
         </div>
         <p class="tiny">{L.orderHint}</p>
+      </div>
+      <div class="field">
+        <span class="label">{L.navStyle}</span>
+        <div class="seg wide" role="group" aria-label={L.navStyle}>
+          {#each NAV_STYLES as n (n)}
+            <button aria-pressed={prefs.navStyle === n} onclick={() => (prefs.navStyle = n)}>{L.navStyles[n]}</button>
+          {/each}
+        </div>
       </div>
       <div class="field">
         <span class="label">{T.layers}</span>

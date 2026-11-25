@@ -130,7 +130,10 @@ const en = {
   view: 'View',
   about: 'About and all settings',
   showTools: 'Show the study tools beside the text (wide screens)',
-  heroShort: 'Each word stands over the Greek or Hebrew it renders.'
+  heroShort: 'Each word stands over the Greek or Hebrew it renders.',
+  navStyle: 'Section navigator',
+  navStyles: { rail: 'Progress rail', tabs: 'Tabs', ring: 'Now reading' } as Record<string, string>,
+  verseWord: 'Verse'
 };
 
 type Labels = typeof en;
@@ -260,7 +263,10 @@ const ta: Labels = {
   view: 'காட்சி',
   about: 'பற்றி, எல்லா அமைப்புகளும்',
   showTools: 'ஆய்வுக் கருவிகளை உரையின் அருகில் காட்டு (அகலத் திரை)',
-  heroShort: 'ஒவ்வொரு சொல்லும் அது மொழிபெயர்க்கும் கிரேக்க அல்லது எபிரெயச் சொல்லின் மேல் நிற்கிறது.'
+  heroShort: 'ஒவ்வொரு சொல்லும் அது மொழிபெயர்க்கும் கிரேக்க அல்லது எபிரெயச் சொல்லின் மேல் நிற்கிறது.',
+  navStyle: 'பகுதி வழிகாட்டி',
+  navStyles: { rail: 'முன்னேற்றக் கோடு', tabs: 'தாவல்கள்', ring: 'இப்போது வாசிப்பது' },
+  verseWord: 'வசனம்'
 };
 
 export const LABELS: Record<UiLang, Labels> = { en, ta };

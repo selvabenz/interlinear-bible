@@ -28,6 +28,7 @@
   import AppMenu from '../lib/components/AppMenu.svelte';
   import Sheet from '../lib/components/Sheet.svelte';
   import Icon from '../lib/components/Icon.svelte';
+  import SectionNav, { type NavItem } from '../lib/components/SectionNav.svelte';
   import { ui, type ReaderCtx } from '../lib/stores/ui.svelte';
   import type { BookMeta } from '../lib/pipeline/types';
 
@@ -50,7 +51,10 @@
   let menuOpen = $state(false);
   /** index of the section being read (the section map under the app bar follows it) */
   let activeSec = $state(0);
-  let secnav = $state<HTMLElement>();
+  /** 0–1 per section of this passage: how much has been read */
+  let secProgress = $state<number[]>([]);
+  /** the verse at the reading line */
+  let curVerse = $state('');
   let toolsOpen = $state(false);
   let localBooks = $state.raw<BookMeta[]>([]);
   let esv = $state<Record<string, string> | null>(null);
@@ -76,6 +80,20 @@
   /** passage name; chapters are named in the Bible's language */
   const plabel = (p: Passage) => passageLabel(p, prefs.ui, L, translation?.language);
   /** where a passage starts, as a number: "8" in a one-chapter book, "2:1" otherwise */
+  /** in the navigator every name is in the Bible's language, like the section headings */
+  const navLabel = (p: Passage) => (translation && p.label?.[translation.language]) || plabel(p);
+  const multiChapter = $derived((meta?.chapters.length ?? 0) > 1);
+  const refNum = (ref: string) => (multiChapter ? ref : ref.split(':')[1]);
+  /** verses in a passage, from the chapter sizes */
+  const passageSize = (p: Passage) => {
+    const [sc, sv] = p.start.split(':').map(Number), [ec, ev] = p.end.split(':').map(Number);
+    let n = 0;
+    for (const ch of meta?.chapters ?? []) {
+      if (ch.c < sc || ch.c > ec) continue;
+      n += (ch.c === ec ? ev : ch.verses) - (ch.c === sc ? sv : 1) + 1;
+    }
+    return Math.max(1, n);
+  };
   const startNum = (p: Passage) => {
     const [c, v] = p.start.split(':');
     return book && book.meta.chapters.length > 1 ? `${c}:${v}` : v;
@@ -115,10 +133,35 @@
     }
     return out;
   });
-  /** the section map: one chip per section, named by its heading (or the passage) and first verse */
-  const secChips = $derived(
-    sections.map((s) => ({ label: s.heads[s.heads.length - 1] ?? (passage ? plabel(passage) : ''), num: s.rows[0]?.label ?? '' }))
-  );
+  /**
+   * The navigator: every passage of the book in order, the one being read opened up into its
+   * sections. Passages before it count as read, so the rail shows how far through the book you are.
+   */
+  const navItems = $derived.by((): NavItem[] => {
+    const out: NavItem[] = [];
+    passages.forEach((p, pi) => {
+      if (p.id === passage?.id) {
+        sections.forEach((s, k) => {
+          const first = s.rows[0]?.ref ?? p.start, last = s.rows[s.rows.length - 1]?.ref ?? p.end;
+          out.push({
+            label: s.heads[s.heads.length - 1] ?? navLabel(p),
+            num: refNum(first),
+            range: `${refNum(first)}–${first.split(':')[0] === last.split(':')[0] ? last.split(':')[1] : last}`,
+            size: Math.max(1, s.rows.length),
+            progress: secProgress[k] ?? 0,
+            current: activeSec === k,
+            go: () => goToSection(k)
+          });
+        });
+      } else {
+        out.push({
+          label: navLabel(p), num: startNum(p), range: multiChapter ? passageRange(p) : passageRange(p).replace(/^\d+:/, ''),
+          size: passageSize(p), progress: pi < pIndex ? 1 : 0, current: false, go: () => routeTo(mode, p.id)
+        });
+      }
+    });
+    return out;
+  });
   const detail = $derived.by(() => {
     void version;
     return book && sel ? detailFor(book, sel, prefs.ui, L) : null;
@@ -225,12 +268,25 @@
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const els = [...document.querySelectorAll<HTMLElement>('.sec[data-sec]')];
-        const line = (secnav?.getBoundingClientRect().bottom ?? 100) + 12;
+        const line = (document.querySelector('.secnav')?.getBoundingClientRect().bottom ?? 100) + 12;
+        // at the very end of the page everything counts as read
+        const end = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
         let k = 0;
-        for (const [i, el] of els.entries()) if (el.getBoundingClientRect().top <= line) k = i;
-        // at the very end of the page the last section counts as read
-        if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2 && els.length) k = els.length - 1;
+        const prog = els.map((el, i) => {
+          const r = el.getBoundingClientRect();
+          if (r.top <= line) k = i;
+          return end ? 1 : Math.max(0, Math.min(1, (line - r.top) / (r.height || 1)));
+        });
+        if (end && els.length) k = els.length - 1;
         activeSec = k;
+        if (prog.some((x, i) => Math.abs(x - (secProgress[i] ?? -1)) > 0.004)) secProgress = prog;
+        let v = '';
+        for (const el of document.querySelectorAll<HTMLElement>('.verse[id]')) {
+          if (el.getBoundingClientRect().top <= line || !v) v = el.id.slice(1);
+          else break;
+        }
+        if (end) v = rows[rows.length - 1]?.ref ?? v;
+        curVerse = v ? refNum(v) : '';
       });
     };
     spy();
@@ -241,17 +297,6 @@
       removeEventListener('scroll', spy);
       removeEventListener('resize', spy);
     };
-  });
-
-  // keep the active section's chip in view in the section map
-  $effect(() => {
-    const k = activeSec;
-    const nav = secnav;
-    if (!nav) return;
-    const chip = nav.querySelector<HTMLElement>(`[data-chip="${k}"]`);
-    if (!chip) return;
-    const left = chip.offsetLeft - (nav.clientWidth - chip.offsetWidth) / 2;
-    nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
   });
 
   function goToSection(k: number) {
@@ -540,28 +585,6 @@
   {/each}
 {/snippet}
 
-{#snippet sectionMap()}
-  <!-- the book as a map of its sections, under the app bar; it follows the reading -->
-  <nav class="secnav" aria-label={L.passages} data-print="hide">
-    <div class="sn-track" bind:this={secnav} style:max-width={mode === 'study' ? '1400px' : 'calc(var(--read-w) + 2 * var(--gutter))'}>
-      {#each passages as p (p.id)}
-        {#if p.id === passage?.id}
-          {#each secChips as c, k (k)}
-            <button class="chip-sec here" class:first={k === 0} class:last={k === secChips.length - 1} data-chip={k}
-              aria-current={activeSec === k ? 'location' : undefined} onclick={() => goToSection(k)}>
-              <span class="mono n">{c.num}</span><span class="t">{c.label}</span>
-            </button>
-          {/each}
-        {:else}
-          <button class="chip-sec" onclick={() => routeTo(mode, p.id)}>
-            <span class="mono n">{startNum(p)}</span><span class="t">{plabel(p)}</span>
-          </button>
-        {/if}
-      {/each}
-    </div>
-  </nav>
-{/snippet}
-
 {#snippet railContent()}
   <section>
     <div class="eyebrow">{L.map}</div>
@@ -623,7 +646,8 @@
         <SearchBox {L} {catalog} translation={route.translation} local={localBooks} book={book!} {mode} {srcRtl} compact onpick={onSearchPick} />
       {/snippet}
     </AppBar>
-    {@render sectionMap()}
+    <SectionNav items={navItems} kind={prefs.navStyle} verse={curVerse} title={meta.name.native} {L}
+      width={mode === 'study' ? '1400px' : 'calc(var(--read-w) + 2 * var(--gutter))'} />
 
     {#if mode === 'read'}
       <!-- ======================================================== READING VIEW -->
@@ -763,84 +787,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  /* the section map under the app bar: follows the reading, tap a section to go to it */
-  .secnav {
-    position: sticky;
-    top: var(--bar-offset);
-    z-index: 35;
-    background: var(--bar);
-    backdrop-filter: saturate(1.4) blur(12px);
-    -webkit-backdrop-filter: saturate(1.4) blur(12px);
-    border-bottom: 1px solid var(--line);
-    transition: top 0.22s ease;
-  }
-  .sn-track {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: var(--nav-h);
-    margin: 0 auto;
-    padding: 0 var(--gutter);
-    overflow-x: auto;
-    scrollbar-width: none;
-    overscroll-behavior-x: contain;
-    /* soft edges: more sections lie either side */
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent);
-    mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent);
-  }
-  .sn-track::-webkit-scrollbar {
-    display: none;
-  }
-  .chip-sec {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: baseline;
-    gap: 7px;
-    max-width: min(260px, 72vw);
-    padding: 6px 12px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--muted-2);
-    font-size: 13px;
-    line-height: 1.2;
-    white-space: nowrap;
-    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-  }
-  .chip-sec:hover {
-    border-color: var(--accent-line);
-    color: var(--ink);
-  }
-  .chip-sec .t {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-family: var(--f-ta-head);
-  }
-  .chip-sec .n {
-    flex: 0 0 auto;
-    font-size: 10.5px;
-    color: var(--muted-5);
-  }
-  /* sections of the passage being read, joined into one group */
-  .chip-sec.here {
-    border-color: var(--accent-line);
-    background: var(--accent-wash);
-    color: var(--ink-3);
-  }
-  .chip-sec.here:not(.last) {
-    margin-right: -4px;
-  }
-  .chip-sec[aria-current='location'] {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--on-accent);
-  }
-  .chip-sec[aria-current='location'] .n {
-    color: var(--on-accent);
-    opacity: 0.8;
   }
 
   /* reading layout: one calm column */

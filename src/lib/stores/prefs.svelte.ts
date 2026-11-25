@@ -11,12 +11,16 @@ export interface Layers {
 }
 
 export type Theme = 'system' | 'light' | 'dark' | 'sepia';
+/** the section navigator under the app bar: progress rail (default), tabs, or "now reading" */
+export type NavStyle = 'rail' | 'tabs' | 'ring';
+export const NAV_STYLES: NavStyle[] = ['rail', 'tabs', 'ring'];
 export const THEMES: Theme[] = ['system', 'light', 'dark', 'sepia'];
 
 export interface Prefs {
   ui: UiLang;
   /** colour theme; 'system' follows the device's light/dark setting */
   theme: Theme;
+  navStyle: NavStyle;
   layers: Layers;
   order: Order;
   taSize: number;     // translation word size, px (design: 14–22, default 16)
@@ -36,6 +40,7 @@ const KEY = 'ib-prefs';
 const DEFAULTS: Prefs = {
   ui: 'en',
   theme: 'system',
+  navStyle: 'rail',
   layers: { translit: true, gloss: true, strong: true, morph: true, esv: false, notes: true },
   order: 'target',
   taSize: 16,
