@@ -22,6 +22,9 @@ export interface Prefs {
   translation: string;
   /** preferred source text per testament (e.g. { NT: 'grc-ugnt' }); unset = the catalog default */
   sources: { NT?: string; OT?: string };
+  /** maintainers: GitHub repository and fine-grained token used to publish imported books */
+  githubRepo: string;
+  githubToken: string;
 }
 
 const KEY = 'ib-prefs';
@@ -35,7 +38,9 @@ const DEFAULTS: Prefs = {
   railOpen: false,
   showAllBooks: false,
   translation: '',
-  sources: {}
+  sources: {},
+  githubRepo: 'selvabenz/interlinear-bible',
+  githubToken: ''
 };
 
 function load(): Prefs {
@@ -62,6 +67,6 @@ export function savePrefs(): void {
 }
 
 export function resetPrefs(): void {
-  const esvKey = prefs.esvKey;
-  Object.assign(prefs, structuredClone(DEFAULTS), { esvKey });
+  const { esvKey, githubRepo, githubToken } = prefs;
+  Object.assign(prefs, structuredClone(DEFAULTS), { esvKey, githubRepo, githubToken });
 }

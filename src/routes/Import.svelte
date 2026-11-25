@@ -6,7 +6,8 @@
   import { bookInfo } from '../lib/pipeline/books';
   import { loadCatalog, forgetBook } from '../lib/data/loader';
   import { saveLocalBook, listLocalBooks, deleteLocalBook } from '../lib/data/local';
-  import { readFiles, runImport, contentBundle, download } from '../lib/data/importer';
+  import { readFiles, runImport, contentBundle, contentFiles, download } from '../lib/data/importer';
+  import { publishPullRequest, DEFAULT_REPO } from '../lib/data/github';
   import type { WorkerResponse, WorkerBookResult } from '../lib/import.worker';
   import { prefs } from '../lib/stores/prefs.svelte';
   import { href } from '../lib/stores/router.svelte';
@@ -38,13 +39,21 @@
     remove: ta ? 'நீக்கு' : 'Remove',
     publishTitle: ta ? 'எல்லோருக்கும் வெளியிட' : 'Publishing for everyone',
     publish: ta
-      ? 'இங்கே சேமித்த புத்தகம் இந்தச் சாதனத்தில் மட்டுமே தெரியும். எல்லோருக்கும் வெளியிட, தொகுப்பைப் பதிவிறக்கி அதன் content/ கோப்புறையை களஞ்சியத்தில் சேர்த்து, npm run content:check இயக்கி, main கிளைக்குத் தள்ளவும். GitHub Actions தளத்தை மீண்டும் உருவாக்கும்.'
-      : 'A book saved here is visible on this device only. To publish it, download the content bundle, copy its content/ folder into the repository, run npm run content:check, and push to main. GitHub Actions rebuilds and redeploys the site.',
+      ? 'இங்கே சேமித்த புத்தகம் இந்தச் சாதனத்தில் மட்டுமே தெரியும். எல்லாச் சாதனங்களுக்கும் வெளியிட, "வெளியிடு (pull request)" அழுத்தவும் (அமைப்புகளில் GitHub சாவி தேவை); GitHub-இல் pull request-ஐ இணைத்ததும் தளம் புதுப்பிக்கப்படும். அல்லது தொகுப்பைப் பதிவிறக்கி அதன் content/ கோப்புறையை களஞ்சியத்தில் சேர்க்கவும்.'
+      : 'A book saved here is visible on this device only. To publish it for every device, press “Publish (pull request)” (needs a GitHub token in Settings) and merge the pull request on GitHub — the site then updates by itself. Or download the content bundle and copy its content/ folder into the repository.',
     guide: ta ? 'உள்ளடக்க வழிகாட்டி' : 'Content guide',
     errors: ta ? 'பிழைகள்' : 'errors',
     warnings: ta ? 'எச்சரிக்கைகள்' : 'warnings',
     back: ta ? '‹ நூலகம்' : '‹ Library',
     asAligned: ta ? 'இணைத்தபடியே' : 'as aligned',
+    publishPr: ta ? 'வெளியிடு (pull request)' : 'Publish (pull request)',
+    publishing: ta ? 'வெளியிடுகிறது…' : 'Publishing…',
+    prOpened: ta ? 'Pull request திறக்கப்பட்டது' : 'Pull request opened',
+    prNext: ta
+      ? 'GitHub-இல் சரிபார்ப்பு (CI) முடிந்ததும் pull request-ஐ இணைக்கவும்; ஒரு நிமிடத்தில் புத்தகம் எல்லாச் சாதனங்களிலும் தெரியும்.'
+      : 'When the checks on GitHub pass, merge the pull request; about a minute later the book is on the site for every device.',
+    needToken: ta ? 'எல்லாச் சாதனங்களுக்கும் வெளியிட, அமைப்புகளில் GitHub சாவியைச் சேர்க்கவும்:' : 'To publish for every device, add a GitHub token in',
+    settings: ta ? 'அமைப்புகள்' : 'Settings',
     remapped: (from: string) => (ta ? `${from} இலிருந்து தானாக மாற்றப்பட்டது` : `remapped from ${from}`),
     remapStats: (kept: number, dropped: number, cross: number) =>
       ta
@@ -112,6 +121,50 @@
   }
 
   const rkey = (r: WorkerBookResult) => `${r.book}/${r.sourceId}`;
+
+  // ---------------------------------------------------------------- publish (pull request)
+  let pub = $state<Record<string, { busy?: boolean; url?: string; err?: string }>>({});
+  const canPublish = $derived(!!prefs.githubToken.trim());
+
+  async function publish(r: WorkerBookResult) {
+    const k = rkey(r);
+    pub[k] = { busy: true };
+    try {
+      const { files, maps } = contentFiles(translation, r);
+      const editions = (res?.books ?? []).filter((x) => x.book === r.book);
+      const name = r.result.book?.name;
+      const lines = editions.map((e) => {
+        const s = e.result.book?.stats;
+        const ed = e.result.book?.edition;
+        const how = e.primary ? 'as aligned' : `remapped from ${srcName(e.alignedTo)}: ${ed?.kept ?? 0} links kept, ${ed?.dropped ?? 0} without a counterpart`;
+        return `- **${srcName(e.sourceId)}** (${how}) — ${s ? `${s.verses} verses, ${s.groups} groups, ` : ''}${e.result.issues.filter((i) => i.level === 'error').length} errors, ${e.result.issues.filter((i) => i.level === 'warning').length} warnings`;
+      });
+      const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13);
+      const out = await publishPullRequest({
+        token: prefs.githubToken.trim(),
+        repo: prefs.githubRepo.trim() || DEFAULT_REPO,
+        files,
+        maps,
+        branch: `content/${translation}-${r.book.toLowerCase()}-${stamp}`,
+        title: `content(${r.book}): ${name?.en ?? r.book} (${translation})`,
+        body: [
+          'Published from the in-app importer.',
+          '',
+          `**${name?.en ?? r.book}** · ${name?.native ?? ''} · ${translation} · aligned to ${srcName(r.alignedTo)}`,
+          '',
+          ...lines,
+          '',
+          'Files:',
+          ...[...Object.keys(files), ...Object.keys(maps)].map((f) => `- \`${f}\``),
+          '',
+          'CI validates the content; merging this pull request deploys the book to the site for every device.'
+        ].join('\n')
+      });
+      pub[k] = { url: out.url };
+    } catch (e) {
+      pub[k] = { err: (e as Error).message };
+    }
+  }
   const srcName = (id: string) => catalog?.sources.find((s) => s.id === id)?.shortName ?? id;
 
   async function save(r: WorkerBookResult) {
@@ -238,9 +291,23 @@
                 <button class="btn primary" onclick={() => save(r)}>{T.save}</button>
               {/if}
               {#if r.primary}
+                {@const p = pub[rkey(r)]}
+                {#if p?.url}
+                  <a class="btn primary" href={p.url} target="_blank" rel="noopener" data-testid="pr-link">{T.prOpened} ↗</a>
+                {:else if canPublish}
+                  <button class="btn primary" disabled={p?.busy || res?.books.some((x) => x.book === r.book && !x.result.ok)} onclick={() => publish(r)}>
+                    {p?.busy ? T.publishing : T.publishPr}
+                  </button>
+                {/if}
                 <button class="btn" onclick={() => download(contentBundle(translation, r), `${translation}-${r.book}-content.zip`)}>{T.bundle}</button>
               {/if}
             </div>
+            {#if r.primary}
+              {@const p = pub[rkey(r)]}
+              {#if p?.url}<p class="msg ok-msg">{T.prNext}</p>{/if}
+              {#if p?.err}<p class="err">{p.err}</p>{/if}
+              {#if !canPublish}<p class="muted small">{T.needToken} <a href={href({ name: 'settings' })}>{T.settings}</a></p>{/if}
+            {/if}
           {/if}
         </div>
       {/each}
@@ -362,6 +429,12 @@
   }
   .err {
     color: var(--danger);
+  }
+  .result .msg,
+  .result .err,
+  .result .muted {
+    margin: 10px 0 0;
+    font-size: 12.5px;
   }
   .result {
     margin-top: 16px;

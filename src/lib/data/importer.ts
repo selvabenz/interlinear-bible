@@ -8,7 +8,7 @@ import type { Chapter, RawSource, RawSourceToken } from '../pipeline/types';
 import { classifyFile } from '../pipeline/classify';
 import { bookInfo } from '../pipeline/books';
 import { sourcesFor, sourceIdOfTokens } from '../pipeline/sources';
-import { formatMapFile } from '../pipeline/remap';
+import { formatMapFile, type MapFile } from '../pipeline/remap';
 import { loadCatalog, chapterUrl, bookUrl } from './loader';
 import type { WorkerRequest, WorkerResponse, WorkerBookResult } from '../import.worker';
 
@@ -113,19 +113,33 @@ export async function runImport(files: InputFile[], translation: string): Promis
   }
 }
 
-/** A zip laid out like the repository's content/ folder, ready to commit (all editions of the book). */
-export function contentBundle(translation: string, r: WorkerBookResult): Blob {
-  const files: Record<string, Uint8Array> = {};
+/**
+ * The repository files of an imported book (all editions): its USFM/meta under content/translations,
+ * word lists the user supplied (bundled or published ones are already in the repository), and the
+ * token maps (path → map, so a publisher can merge them with the repository's hand overrides).
+ */
+export function contentFiles(translation: string, r: WorkerBookResult): { files: Record<string, string>; maps: Record<string, MapFile> } {
+  const files: Record<string, string> = {};
   for (const f of r.files) {
     if (f.role === 'source') {
       if (f.name.includes(PUBLISHED) || f.name.includes(BUNDLED)) continue; // already in the repo
-      files[`content/sources/${f.source ?? r.sourceId}/${r.book}.json`] = strToU8(f.text);
-    } else if (f.role === 'aligned') files[`content/translations/${translation}/${r.book}.aligned.usfm`] = strToU8(f.text);
-    else if (f.role === 'semantic') files[`content/translations/${translation}/${r.book}.semantic.usfm`] = strToU8(f.text);
-    else if (f.role === 'meta') files[`content/translations/${translation}/${r.book}.meta.json`] = strToU8(f.text);
+      files[`content/sources/${f.source ?? r.sourceId}/${r.book}.json`] = f.text;
+    } else if (f.role === 'aligned') files[`content/translations/${translation}/${r.book}.aligned.usfm`] = f.text;
+    else if (f.role === 'semantic') files[`content/translations/${translation}/${r.book}.semantic.usfm`] = f.text;
+    else if (f.role === 'meta') files[`content/translations/${translation}/${r.book}.meta.json`] = f.text;
   }
-  // token maps between the editions; hashes refer to the token files above / in the repo
-  for (const [key, map] of Object.entries(r.maps ?? {})) files[`content/maps/${key}/${r.book}.json`] = strToU8(formatMapFile(map));
+  const maps: Record<string, MapFile> = {};
+  for (const [key, map] of Object.entries(r.maps ?? {})) maps[`content/maps/${key}/${r.book}.json`] = map;
+  return { files, maps };
+}
+
+/** A zip laid out like the repository's content/ folder, ready to commit (all editions of the book). */
+export function contentBundle(translation: string, r: WorkerBookResult): Blob {
+  const c = contentFiles(translation, r);
+  const files: Record<string, Uint8Array> = {};
+  for (const [path, text] of Object.entries(c.files)) files[path] = strToU8(text);
+  // token maps between the editions; hashes refer to the token files in the repo
+  for (const [path, map] of Object.entries(c.maps)) files[path] = strToU8(formatMapFile(map));
   files['PUBLISHING.txt'] = strToU8(
     [
       `Content bundle for ${translation}/${r.book}, prepared by the Interlinear Bible importer on ${new Date().toISOString()}.`,

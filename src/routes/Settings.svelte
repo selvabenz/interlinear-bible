@@ -7,6 +7,7 @@
   import { prefs, resetPrefs } from '../lib/stores/prefs.svelte';
   import { flags, exportFlags, importFlags, clearAllFlags } from '../lib/stores/flags.svelte';
   import { testEsvKey } from '../lib/esv';
+  import { checkToken, DEFAULT_REPO } from '../lib/data/github';
   import { download } from '../lib/data/importer';
 
   const L = $derived(LABELS[prefs.ui]);
@@ -56,6 +57,31 @@
       .filter((g) => g.ids.length > 1);
   });
   let keyMsg = $state('');
+  let ghMsg = $state('');
+  const P = $derived({
+    title: ta ? 'வெளியிடுதல் (பராமரிப்பாளர்கள்)' : 'Publishing (maintainers)',
+    body: ta
+      ? 'இறக்கிய புத்தகத்தை எல்லாச் சாதனங்களுக்கும் வெளியிட, GitHub-இல் ஒரு pull request திறக்கப்படும்; அதை இணைத்ததும் தளம் புதுப்பிக்கப்படும். சாவி இந்த உலாவியில் மட்டுமே சேமிக்கப்படும்.'
+      : 'To publish an imported book for every device, the importer opens a pull request on GitHub; merging it updates the site. The token is stored in this browser only.',
+    repo: ta ? 'GitHub களஞ்சியம்' : 'GitHub repository',
+    token: ta ? 'GitHub சாவி (fine-grained)' : 'GitHub token (fine-grained)',
+    check: ta ? 'சரிபார்' : 'Check',
+    ok: (login: string, repo: string) => (ta ? `சரி — ${login || 'சாவி'} ${repo}-இல் எழுதலாம்` : `OK — ${login || 'this token'} can write to ${repo}`),
+    how: ta
+      ? 'இந்தக் களஞ்சியத்திற்கு மட்டும் ஒரு fine-grained token உருவாக்கவும்: Contents — Read and write, Pull requests — Read and write.'
+      : 'Create a fine-grained token for this repository only, with Contents: Read and write and Pull requests: Read and write.',
+    create: ta ? 'சாவி உருவாக்கு' : 'Create a token'
+  });
+
+  async function checkGithub() {
+    ghMsg = '…';
+    try {
+      const r = await checkToken(prefs.githubToken.trim(), prefs.githubRepo.trim() || DEFAULT_REPO);
+      ghMsg = P.ok(r.login, prefs.githubRepo.trim() || DEFAULT_REPO);
+    } catch (e) {
+      ghMsg = (e as Error).message;
+    }
+  }
   let flagMsg = $state('');
   let storage = $state('');
   let cacheMsg = $state('');
@@ -158,6 +184,27 @@
         {/each}
       </section>
     {/if}
+
+    <section class="card sec" data-testid="publish-settings">
+      <h2>{P.title}</h2>
+      <p class="muted">{P.body}</p>
+      <label class="field">
+        <span class="label">{P.repo}</span>
+        <input class="input" spellcheck="false" bind:value={prefs.githubRepo} placeholder={DEFAULT_REPO} />
+      </label>
+      <label class="field">
+        <span class="label">{P.token}</span>
+        <div class="inline">
+          <input class="input key" type="password" autocomplete="off" spellcheck="false" bind:value={prefs.githubToken} placeholder="github_pat_…" />
+          <button class="btn" disabled={!prefs.githubToken.trim()} onclick={checkGithub}>{P.check}</button>
+        </div>
+      </label>
+      {#if ghMsg}<p class="msg">{ghMsg}</p>{/if}
+      <p class="tiny">
+        {P.how}
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">{P.create} ↗</a>
+      </p>
+    </section>
 
     <section class="card sec">
       <h2>{T.english}</h2>
