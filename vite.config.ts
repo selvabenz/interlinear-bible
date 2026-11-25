@@ -52,6 +52,9 @@ export default defineConfig({
         ],
         globIgnores: ['data/**'],
         navigateFallback: 'index.html',
+        // the app lives at the root (hash routes); the static chapter pages for search engines
+        // (/<translation>/<book>/<chapter>/) must load from the network, not fall back to the app
+        navigateFallbackAllowlist: [new RegExp(`^${base}(index\\.html)?$`)],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {

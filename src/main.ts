@@ -13,6 +13,9 @@ import '@fontsource/noto-serif-hebrew/hebrew-400.css';
 import './app.css';
 import App from './App.svelte';
 
-const app = mount(App, { target: document.getElementById('app')! });
+// #app holds static text and book links for search engines (see index.html, scripts/build-seo.ts)
+const target = document.getElementById('app')!;
+target.replaceChildren();
+const app = mount(App, { target });
 
 export default app;

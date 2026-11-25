@@ -16,6 +16,7 @@
     "dev": "vite",
     "prebuild": "npm run content",
     "build": "vite build",
+    "postbuild": "tsx scripts/build-seo.ts",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run",
